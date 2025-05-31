@@ -16,6 +16,14 @@ interface ServerEvents {
 	performAttack: (attackType: AttackType, target?: Vector3) => void;
 	equipFruit: (fruitId: string) => void;
 	unequipFruit: () => void;
+	
+	// Boat Events
+	spawnBoat: () => void;
+	despawnBoat: () => void;
+	upgradeBoat: (upgradeId: string) => void;
+	customizeBoat: (customizationId: string) => void;
+	fireCannonAt: (targetPosition: Vector3) => void;
+	repairBoat: () => void;
 }
 
 interface ServerFunctions {}
@@ -32,9 +40,22 @@ interface ClientEvents {
 	onAttackPerformed: (attacker: Player, attackType: AttackType, position: Vector3) => void;
 	onPlayerDeath: (player: Player, killer?: Player) => void;
 	onHealthChanged: (player: Player, newHealth: number, maxHealth: number) => void;
+	
+	// Boat Events
+	onBoatSpawned: (player: Player, boatTemplateId: string) => void;
+	onBoatDespawned: (player: Player) => void;
+	onBoatUpgraded: (player: Player, upgradeId: string) => void;
+	onBoatCustomized: (player: Player, customizationId: string) => void;
+	onCannonFired: (player: Player, fromPosition: Vector3, targetPosition: Vector3) => void;
+	onBoatDamaged: (player: Player, damage: number, newHealth: number, maxHealth: number) => void;
+	onBoatDestroyed: (player: Player, destroyer?: Player) => void;
 }
 
 interface ClientFunctions {}
 
 export const GlobalEvents = Networking.createEvent<ServerEvents, ClientEvents>();
 export const GlobalFunctions = Networking.createFunction<ServerFunctions, ClientFunctions>();
+
+// Exports con nombres más simples para mayor comodidad
+export const Events = GlobalEvents;
+export const Functions = GlobalFunctions;
