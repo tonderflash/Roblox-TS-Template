@@ -1,0 +1,23 @@
+# Comandos de Admin (CMD/Consola)
+
+1. /testnpcs
+   - Aliases: /npcs, /testnpc
+   - Descripción: Prueba el sistema de NPCs y muestra información de los NPCs activos en consola.
+
+2. /equipfruit [fruitId]
+   - Aliases: /equip
+   - Descripción: Equipa una fruta del diablo al jugador. Ejemplo: /equipfruit fire
+
+3. /unequipfruit
+   - Aliases: /unequip
+   - Descripción: Desequipa la fruta del diablo actual del jugador.
+
+4. /giveCurrency [player] [currency] [amount]
+   - Aliases: /gC
+   - Descripción: Da una cantidad de currency a un jugador. Ejemplo: /giveCurrency TonderFlashh Beli 1000
+
+# Comandos útiles para testing (no admin, pero útiles)
+
+5. /listfruits
+   - Aliases: /fruits
+   - Descripción: Lista todas las frutas del diablo disponibles. 
