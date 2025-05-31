@@ -1,4 +1,6 @@
-export = {
+import { CommandDefinition } from "@rbxts/cmdr";
+
+export = <CommandDefinition>{
 	Name: "spawnboat",
 	Aliases: ["sb"],
 	Description: "Spawnea el barco de un jugador",

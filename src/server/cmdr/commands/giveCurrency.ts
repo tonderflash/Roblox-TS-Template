@@ -4,7 +4,7 @@ export = identity<CommandDefinition>({
 	Name: "giveCurrency",
 	Aliases: ["gC"],
 	Description: "Increase the Players Currency",
-	Group: "Admin",
+	Group: "DefaultAdmin",
 	Args: [
 		{
 			Type: "player",

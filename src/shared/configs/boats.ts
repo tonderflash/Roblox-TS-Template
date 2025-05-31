@@ -3,7 +3,7 @@ import { BoatTemplate, BoatUpgrade, BoatCustomization } from "shared/types/boat"
 // Plantillas de barcos según el plan del proyecto
 
 export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
-    // TIER 1: Barcos Básicos (Gratis)
+    // TIER 1: Barcos Básicos (Gratis con crafting O starter gratuito)
     starter_sloop: {
         id: "starter_sloop",
         name: "starter_sloop",
@@ -19,10 +19,52 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             storageCapacity: 10
         },
         cost: 0,
-        description: "Un sloop básico perfecto para empezar tu aventura pirata. Gratis para todos los jugadores."
+        description: "Un sloop básico perfecto para empezar tu aventura pirata. Gratis para todos los jugadores.",
+        isCraftable: false // Este se da gratis al empezar
     },
 
-    // TIER 2: Barcos Mejorados ($299-699 Robux)
+    // NUEVOS BARCOS BÁSICOS CRAFTEABLES
+    basic_fishing_boat: {
+        id: "basic_fishing_boat",
+        name: "basic_fishing_boat",
+        displayName: "Bote de Pesca Básico",
+        tier: "basic",
+        baseStats: {
+            health: 80,
+            maxHealth: 80,
+            speed: 18, // Más rápido que starter
+            armor: 0,
+            cannonDamage: 20,
+            cannonCount: 1,
+            storageCapacity: 15 // Más almacenamiento
+        },
+        cost: 0, // Gratis con crafting
+        description: "Bote básico construible con materiales comunes. Más rápido y con más almacenamiento que el starter.",
+        isCraftable: true,
+        craftingRecipeId: "basic_fishing_boat"
+    },
+
+    merchant_sloop: {
+        id: "merchant_sloop",
+        name: "merchant_sloop",
+        displayName: "Sloop Mercante",
+        tier: "basic",
+        baseStats: {
+            health: 120,
+            maxHealth: 120,
+            speed: 15, // Más lento pero más resistente
+            armor: 5,
+            cannonDamage: 30,
+            cannonCount: 1,
+            storageCapacity: 25 // Mucho almacenamiento
+        },
+        cost: 0, // Gratis con crafting
+        description: "Sloop robusto con gran almacenamiento. Perfecto para comercio y raids largos.",
+        isCraftable: true,
+        craftingRecipeId: "merchant_sloop"
+    },
+
+    // TIER 2: Barcos Mejorados (Crafteable O $299-699 Robux para instant)
     war_galleon: {
         id: "war_galleon",
         name: "war_galleon", 
@@ -37,8 +79,10 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             cannonCount: 2,
             storageCapacity: 20
         },
-        cost: 499,
-        description: "Galeón de guerra robusto con cañones duales. Perfecto para combate naval serio."
+        cost: 499, // Instant purchase OR crafting
+        description: "Galeón de guerra robusto con cañones duales. Perfecto para combate naval serio.",
+        isCraftable: true,
+        craftingRecipeId: "war_galleon_craft"
     },
 
     speed_cutter: {
@@ -55,8 +99,10 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             cannonCount: 1,
             storageCapacity: 8
         },
-        cost: 299,
-        description: "Cortador rápido diseñado para escapadas rápidas y raids sorpresa."
+        cost: 299, // Instant purchase OR crafting
+        description: "Cortador rápido diseñado para escapadas rápidas y raids sorpresa.",
+        isCraftable: true,
+        craftingRecipeId: "speed_cutter_craft"
     },
 
     tank_frigate: {
@@ -73,11 +119,13 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             cannonCount: 4,
             storageCapacity: 30
         },
-        cost: 699,
-        description: "Fragata pesada con armadura máxima. Lenta pero devastadoramente poderosa."
+        cost: 699, // Instant purchase OR crafting
+        description: "Fragata pesada con armadura máxima. Lenta pero devastadoramente poderosa.",
+        isCraftable: true,
+        craftingRecipeId: "tank_frigate_craft"
     },
 
-    // TIER 3: Barcos Legendarios ($999-1499 Robux)
+    // TIER 3: Barcos Legendarios (Crafteable con materiales legendarios O $999-1499 Robux)
     ghost_ship: {
         id: "ghost_ship",
         name: "ghost_ship",
@@ -92,8 +140,10 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             cannonCount: 3,
             storageCapacity: 25
         },
-        cost: 1299,
-        description: "Barco fantasma legendario con habilidad de invisibilidad. Solo los piratas más temidos lo poseen."
+        cost: 1299, // Premium instant purchase OR crafting
+        description: "Barco fantasma legendario con habilidad de invisibilidad. Solo los piratas más temidos lo poseen.",
+        isCraftable: true,
+        craftingRecipeId: "ghost_ship_craft"
     },
 
     fire_drake: {
@@ -110,8 +160,10 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             cannonCount: 2,
             storageCapacity: 20
         },
-        cost: 1499,
-        description: "Draco de fuego que dispara cañones incendiarios. Sus enemigos arden en llamas."
+        cost: 1499, // Premium instant purchase OR crafting
+        description: "Draco de fuego que dispara cañones incendiarios. Sus enemigos arden en llamas.",
+        isCraftable: true,
+        craftingRecipeId: "fire_drake_craft"
     },
 
     ice_breaker: {
@@ -128,8 +180,10 @@ export const BOAT_TEMPLATES: Record<string, BoatTemplate> = {
             cannonCount: 3,
             storageCapacity: 35
         },
-        cost: 999,
-        description: "Rompehielos legendario que congela a sus enemigos. La dominación ártica absoluta."
+        cost: 999, // Premium instant purchase OR crafting
+        description: "Rompehielos legendario que congela a sus enemigos. La dominación ártica absoluta.",
+        isCraftable: true,
+        craftingRecipeId: "ice_breaker_craft"
     }
 };
 

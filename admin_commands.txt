@@ -1,5 +1,6 @@
 # Comandos de Admin (CMD/Consola)
 
+## COMANDOS DE NPCs Y FRUTAS
 1. /testnpcs
    - Aliases: /npcs, /testnpc
    - Descripción: Prueba el sistema de NPCs y muestra información de los NPCs activos en consola.
@@ -16,8 +17,45 @@
    - Aliases: /gC
    - Descripción: Da una cantidad de currency a un jugador. Ejemplo: /giveCurrency TonderFlashh Beli 1000
 
+## COMANDOS DE BARCOS
+5. /listboats
+   - Aliases: /boats
+   - Descripción: Lista todos los barcos disponibles en el juego con sus stats y costos.
+
+6. /giveboat [player] [boatId]
+   - Aliases: /givevessel
+   - Descripción: Da un barco específico a un jugador. Ejemplo: /giveboat TonderFlashh war_galleon
+
+7. /spawnboat [player]  
+   - Aliases: /spawn
+   - Descripción: Spawnea el barco actual del jugador en el mundo.
+
+## COMANDOS DE RECURSOS Y CRAFTING (NUEVO)
+8. /listresources [player]
+   - Aliases: /resources, /listres
+   - Descripción: Muestra todos los recursos que tiene un jugador en su inventario.
+
+9. /listrecipes
+   - Aliases: /recipes, /crafting
+   - Descripción: Muestra todas las recetas de crafting disponibles para barcos.
+
+10. /craftboat [player] [recipeId]
+    - Aliases: /craft
+    - Descripción: Craftea un barco usando los materiales del jugador. Ejemplo: /craftboat TonderFlashh basic_fishing_boat
+
 # Comandos útiles para testing (no admin, pero útiles)
 
-5. /listfruits
-   - Aliases: /fruits
-   - Descripción: Lista todas las frutas del diablo disponibles. 
+11. /listfruits
+    - Aliases: /fruits
+    - Descripción: Lista todas las frutas del diablo disponibles.
+
+# NUEVAS RECETAS DE CRAFTING BÁSICAS:
+- basic_fishing_boat: 25 Madera + 10 Cuerda + 15 Tela
+- merchant_sloop: 35 Madera + 15 Cuerda + 20 Tela + 5 Hierro
+
+# FLUJO DE TESTING RECOMENDADO:
+1. /listresources [player] - Ver recursos actuales
+2. /listrecipes - Ver qué se puede craftear  
+3. /craftboat [player] [recipeId] - Craftear barco
+4. /spawnboat [player] - Spawnearlo en el mundo
+5. /listboats - Verificar que funcione correctamente

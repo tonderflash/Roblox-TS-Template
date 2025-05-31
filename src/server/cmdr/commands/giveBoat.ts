@@ -1,6 +1,8 @@
-export = {
+import { CommandDefinition } from "@rbxts/cmdr";
+
+export = <CommandDefinition>{
 	Name: "giveboat",
-	Aliases: ["gb"],
+	Aliases: ["givevessel"],
 	Description: "Da un barco específico a un jugador",
 	Group: "DefaultAdmin",
 	Args: [

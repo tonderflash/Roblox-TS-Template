@@ -4,6 +4,6 @@ export = identity<CommandDefinition>({
 	Name: "unequipfruit",
 	Aliases: ["unequip"],
 	Description: "Desequipa la fruta del diablo actual",
-	Group: "Admin",
+	Group: "DefaultAdmin",
 	Args: [],
 }); 

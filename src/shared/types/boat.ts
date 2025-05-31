@@ -19,6 +19,8 @@ export interface BoatTemplate {
     cost: number; // En Robux, 0 para gratis
     description: string;
     modelId?: string; // Para diferentes modelos 3D
+    isCraftable?: boolean; // Si se puede craftear con materiales
+    craftingRecipeId?: string; // ID de la receta de crafting
 }
 
 export interface BoatUpgrade {
