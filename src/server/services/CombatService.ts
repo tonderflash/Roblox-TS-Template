@@ -211,7 +211,7 @@ export class CombatService implements OnStart {
 	}
 
 	private isNPCTarget(target: CombatTarget): target is { type: "npc"; id: string; model: Model } {
-		return typeIs(target, "table") && (target as unknown as { type: string }).type === "npc";
+		return typeIs(target, "table") && "type" in target && target.type === "npc";
 	}
 
 	private dealDamageToPlayer(attacker: Player, target: Player, damage: number, attackType: AttackType, position: Vector3, isCrit: boolean): void {
