@@ -7,12 +7,12 @@ export = function (context: CommandContext, targetPlayer?: Player) {
     
     try {
         const simpleBoatService = Dependency<SimpleBoatService>();
-        const success = simpleBoatService.despawnBoat(player);
+        const success = simpleBoatService.spawnSimpleBoat(player);
         
         if (success) {
-            return `✅ ${player.Name} despawneó su barco`;
+            return `✅ ${player.Name} spawneó barco SIMPLE exitosamente`;
         } else {
-            return `❌ ${player.Name} no tiene ningún barco spawneado`;
+            return `❌ Error spawneando barco simple para ${player.Name}`;
         }
         
     } catch (error) {

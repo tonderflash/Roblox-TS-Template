@@ -18,40 +18,23 @@ export class IslandService implements OnStart {
     }
 
     private createOceanFloor(): void {
-        // CORREGIDO: Crear océano funcional a nivel 5 studs
+        // AGUA REAL - Solo visual, no sólida
         const ocean = new Instance("Part");
         ocean.Name = "Ocean";
-        ocean.Size = new Vector3(4000, 10, 4000); // Océano masivo pero más delgado
-        ocean.Position = new Vector3(0, 0, 0); // Nivel del agua a 5 studs (centro en Y=0, tope en Y=5)
+        ocean.Size = new Vector3(4000, 10, 4000);
+        ocean.Position = new Vector3(0, 0, 0); // Centro en Y=0, superficie en Y=5
         ocean.Anchored = true;
         ocean.Material = Enum.Material.Water;
         ocean.BrickColor = new BrickColor("Deep blue");
         ocean.Transparency = 0.3;
-        ocean.CanCollide = false; // Solo visual, no bloquea nada
+        ocean.CanCollide = false; // ✅ NO SÓLIDO - Solo visual
         ocean.Parent = Workspace;
 
-        // === SUPERFICIE DE AGUA SÓLIDA PARA FLOTACIÓN ===
-        const waterSurface = new Instance("Part");
-        waterSurface.Name = "WaterSurface";
-        waterSurface.Size = new Vector3(4000, 1, 4000); // Superficie más gruesa para flotación
-        waterSurface.Position = new Vector3(0, 5, 0); // Exactamente en el nivel 5
-        waterSurface.Anchored = true;
-        waterSurface.Material = Enum.Material.Water;
-        waterSurface.BrickColor = new BrickColor("Bright blue");
-        waterSurface.Transparency = 0.9; // Casi invisible pero sólida
-        waterSurface.CanCollide = true; // CRÍTICO: Permite que jugadores y barcos floten
-        waterSurface.Parent = Workspace;
-
-        // === EFECTO VISUAL DE ONDAS ===
-        const waterGlow = new Instance("PointLight");
-        waterGlow.Name = "WaterGlow";
-        waterGlow.Color = new Color3(0.2, 0.6, 1);
-        waterGlow.Brightness = 0.5;
-        waterGlow.Range = 50;
-        waterGlow.Parent = waterSurface;
+        // ❌ ELIMINADO: WaterSurface sólida (era un PISO, no agua)
+        // Los barcos usarán BodyPosition en Y=5 para flotar
 
         this.oceanFloor = ocean;
-        print("🌊 Océano funcional creado - Nivel del agua: 5 studs - Flotación habilitada");
+        print("🌊 Océano REAL creado - Agua navegable sin pisos sólidos");
     }
 
     private generateAllIslands(): void {
