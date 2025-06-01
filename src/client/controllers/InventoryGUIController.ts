@@ -23,6 +23,9 @@ export class InventoryGUIController implements OnStart {
     private deviceSpecs: DeviceSpecs = DEVICE_CONFIGS.PC;
     private inventorySlots: Frame[] = [];
     
+    // NUEVO: Map para trackear qué tipo de recurso está en qué slot
+    private resourceSlotMapping = new Map<string, number>();
+    
     private playerResources = new Map<string, number>([
         ["wood", 0],
         ["rope", 0], 
@@ -241,12 +244,17 @@ export class InventoryGUIController implements OnStart {
 
     private createInventorySlot(index: number): Frame {
         const slot = new Instance("Frame");
-        slot.Name = `Slot_${index}`;
+        slot.Name = `Empty_Slot_${index}`;
         slot.BackgroundColor3 = PIRATE_THEME.secondaryColor;
         slot.BorderColor3 = PIRATE_THEME.borderColor;
         slot.BorderSizePixel = 2;
         slot.LayoutOrder = index;
         slot.Parent = this.inventoryTab;
+
+        // NUEVO: Inicializar atributos como vacío explícitamente
+        slot.SetAttribute("ResourceType", "");
+        slot.SetAttribute("Amount", 0);
+        slot.SetAttribute("DisplayName", "");
 
         // Icon - MEJORADO: Configuración específica para emojis
         const icon = new Instance("TextLabel");
@@ -530,6 +538,14 @@ export class InventoryGUIController implements OnStart {
         
         this.playerResources.set(resourceType, newAmount);
         
+        // MEJORADO: Debugging detallado para detectar problemas de stackeo
+        print(`📦 Added ${actualAdded}x ${resourceType} (Total: ${newAmount})`);
+        print(`🔍 DEBUG: Current slot mapping:`, this.resourceSlotMapping);
+        print(`🔍 DEBUG: All resources:`, this.playerResources);
+        
+        // NUEVO: Verificar integridad del mapping antes de refresh
+        this.validateSlotMapping();
+        
         // MEJORADO: Mensaje más informativo
         if (actualAdded < amount) {
             print(`📦 Added ${actualAdded}x ${resourceType} (Total: ${newAmount}) - ${amount - actualAdded} lost due to stack limit`);
@@ -541,43 +557,112 @@ export class InventoryGUIController implements OnStart {
         this.refreshCraftingDisplay();
     }
 
-    private refreshInventoryDisplay(): void {
-        let slotIndex = 0;
-        
-        for (const [resourceType, amount] of this.playerResources) {
-            if (amount > 0 && slotIndex < this.inventorySlots.size()) {
-                const slot = this.inventorySlots[slotIndex];
-                const amountLabel = slot.FindFirstChild("Amount") as TextLabel;
-                const icon = slot.FindFirstChild("Icon") as TextLabel; // CAMBIADO: Ahora es TextLabel
-                
-                if (amountLabel && icon) {
-                    amountLabel.Text = tostring(amount);
-                    icon.Text = this.getResourceIcon(resourceType); // CAMBIADO: Ahora devuelve emoji
-                    slot.BackgroundColor3 = PIRATE_THEME.accentColor;
-                    
-                    // NUEVO: Tooltip con información del recurso
-                    const resourceInfo = getResource(resourceType);
-                    if (resourceInfo) {
-                        slot.Name = `${resourceInfo.displayName}_Slot_${slotIndex}`;
-                    }
-                }
-                slotIndex++;
+    // NUEVO: Método para validar que el mapping está correcto
+    private validateSlotMapping(): void {
+        for (const [resourceType, slotIndex] of this.resourceSlotMapping) {
+            const slot = this.inventorySlots[slotIndex];
+            if (!slot) {
+                print(`❌ ERROR: Slot ${slotIndex} for ${resourceType} doesn't exist!`);
+                this.resourceSlotMapping.delete(resourceType);
+                continue;
             }
-        }
-        
-        // Limpiar slots vacíos
-        for (let i = slotIndex; i < this.inventorySlots.size(); i++) {
-            const slot = this.inventorySlots[i];
-            const amountLabel = slot.FindFirstChild("Amount") as TextLabel;
-            const icon = slot.FindFirstChild("Icon") as TextLabel; // CAMBIADO: Ahora es TextLabel
             
-            if (amountLabel && icon) {
-                amountLabel.Text = "";
-                icon.Text = ""; // CAMBIADO: Limpiar texto del emoji
-                slot.BackgroundColor3 = PIRATE_THEME.secondaryColor;
-                slot.Name = `Empty_Slot_${i}`;
+            const slotResourceType = slot.GetAttribute("ResourceType") as string;
+            if (slotResourceType && slotResourceType !== resourceType) {
+                print(`❌ ERROR: Slot ${slotIndex} mapping mismatch! Expected: ${resourceType}, Found: ${slotResourceType}`);
+                // Corregir el mapping
+                this.resourceSlotMapping.delete(resourceType);
             }
         }
+    }
+
+    private refreshInventoryDisplay(): void {
+        // ARREGLADO: Lógica completamente reescrita para prevenir stackeo incorrecto
+        
+        // Paso 1: Actualizar slots existentes y limpiar los que ya no tienen recursos
+        for (const [resourceType, slotIndex] of this.resourceSlotMapping) {
+            const amount = this.playerResources.get(resourceType) || 0;
+            const slot = this.inventorySlots[slotIndex];
+            
+            if (amount > 0) {
+                // Actualizar slot existente
+                this.updateSlotDisplay(slot, resourceType, amount, slotIndex);
+            } else {
+                // Limpiar slot vacío y remover del mapping
+                this.clearSlot(slot, slotIndex);
+                this.resourceSlotMapping.delete(resourceType);
+            }
+        }
+        
+        // Paso 2: Asignar nuevos recursos a slots vacíos
+        for (const [resourceType, amount] of this.playerResources) {
+            if (amount > 0 && !this.resourceSlotMapping.has(resourceType)) {
+                // Buscar el primer slot vacío
+                const emptySlotIndex = this.findEmptySlotIndex();
+                if (emptySlotIndex !== -1) {
+                    const slot = this.inventorySlots[emptySlotIndex];
+                    this.updateSlotDisplay(slot, resourceType, amount, emptySlotIndex);
+                    this.resourceSlotMapping.set(resourceType, emptySlotIndex);
+                } else {
+                    print(`⚠️ No hay slots vacíos para ${resourceType}, cantidad: ${amount}`);
+                }
+            }
+        }
+    }
+
+    // NUEVO: Método helper para actualizar la visualización de un slot
+    private updateSlotDisplay(slot: Frame, resourceType: string, amount: number, slotIndex: number): void {
+        const amountLabel = slot.FindFirstChild("Amount") as TextLabel;
+        const icon = slot.FindFirstChild("Icon") as TextLabel;
+        
+        if (amountLabel && icon) {
+            amountLabel.Text = tostring(amount);
+            icon.Text = this.getResourceIcon(resourceType);
+            slot.BackgroundColor3 = PIRATE_THEME.accentColor;
+            
+            // MEJORADO: Añadir metadatos al slot para debugging
+            slot.Name = `${resourceType}_Slot_${slotIndex}`;
+            slot.SetAttribute("ResourceType", resourceType);
+            slot.SetAttribute("Amount", amount);
+            
+            // NUEVO: Tooltip con información del recurso
+            const resourceInfo = getResource(resourceType);
+            if (resourceInfo) {
+                slot.SetAttribute("DisplayName", resourceInfo.displayName);
+            }
+        }
+    }
+
+    // NUEVO: Método helper para limpiar un slot
+    private clearSlot(slot: Frame, slotIndex: number): void {
+        const amountLabel = slot.FindFirstChild("Amount") as TextLabel;
+        const icon = slot.FindFirstChild("Icon") as TextLabel;
+        
+        if (amountLabel && icon) {
+            amountLabel.Text = "";
+            icon.Text = "";
+            slot.BackgroundColor3 = PIRATE_THEME.secondaryColor;
+            slot.Name = `Empty_Slot_${slotIndex}`;
+            
+            // Limpiar atributos
+            slot.SetAttribute("ResourceType", undefined);
+            slot.SetAttribute("Amount", undefined);
+            slot.SetAttribute("DisplayName", undefined);
+        }
+    }
+
+    // NUEVO: Método helper para encontrar el primer slot vacío
+    private findEmptySlotIndex(): number {
+        for (let i = 0; i < this.inventorySlots.size(); i++) {
+            const slot = this.inventorySlots[i];
+            const resourceType = slot.GetAttribute("ResourceType") as string;
+            
+            // Si el slot no tiene tipo de recurso asignado, está vacío
+            if (!resourceType || resourceType === "") {
+                return i;
+            }
+        }
+        return -1; // No se encontró slot vacío
     }
 
     private refreshCraftingDisplay(): void {
