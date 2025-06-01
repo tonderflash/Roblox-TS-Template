@@ -5,6 +5,13 @@ import { PlayerData } from "./store/slices/players/types";
 import { Setting } from "./configs/Settings";
 import { AttackType, DamageInfo } from "./types/combat";
 
+// Definimos un tipo para el inventario que coincida con los datos enviados desde InventoryService
+interface PlayerInventory {
+	resources: Record<string, number>; // Se serializa como objeto, no Map
+	unlockedRecipes: string[]; // Se serializa como array, no Set
+	lastUpdated: number;
+}
+
 interface ServerEvents {
 	reflex: {
 		start: () => void;
@@ -28,6 +35,14 @@ interface ServerEvents {
 	// Boat Navigation Events
 	startBoatNavigation: (direction: Vector3) => void;
 	stopBoatNavigation: () => void;
+	
+	// GUI Events
+	openInventory: () => void;
+	closeInventory: () => void;
+	craftItem: (recipeId: string) => void;
+	giveResource: (resourceType: string, amount: number) => void;
+	unlockRecipe: (recipeId: string) => void;
+	resetInventory: () => void;
 }
 
 interface ServerFunctions {}
@@ -53,6 +68,14 @@ interface ClientEvents {
 	onCannonFired: (player: Player, fromPosition: Vector3, targetPosition: Vector3) => void;
 	onBoatDamaged: (player: Player, damage: number, newHealth: number, maxHealth: number) => void;
 	onBoatDestroyed: (player: Player, destroyer?: Player) => void;
+	
+	// GUI Events
+	onInventoryUpdated: (inventory: PlayerInventory) => void;
+	onInventoryOpened: () => void;
+	onInventoryClosed: () => void;
+	onResourceAdded: (resourceType: string, amount: number) => void;
+	onCraftingCompleted: (recipeId: string, success: boolean) => void;
+	onRecipeUnlocked: (recipeId: string) => void;
 }
 
 interface ClientFunctions {}

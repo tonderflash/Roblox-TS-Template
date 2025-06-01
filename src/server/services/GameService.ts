@@ -4,6 +4,7 @@ import { CombatService } from "./CombatService";
 import { ResourceService } from "./ResourceService";
 import { ToolService } from "./ToolService";
 import { NPCService } from "./NPCService";
+import { InventoryService } from "./InventoryService";
 
 @Service()
 export class GameService implements OnStart {
@@ -18,6 +19,7 @@ export class GameService implements OnStart {
         const resourceService = Dependency<ResourceService>();
         const toolService = Dependency<ToolService>();
         const npcService = Dependency<NPCService>();
+        const inventoryService = Dependency<InventoryService>();
         
         // Configurar dependencias para evitar circular dependencies
         
@@ -25,14 +27,16 @@ export class GameService implements OnStart {
         combatService.setNPCService(npcService);
         combatService.setResourceService(resourceService);
         
-        // ResourceService necesita ToolService y CombatService
+        // ResourceService necesita ToolService, CombatService e InventoryService
         resourceService.setToolService(toolService);
         resourceService.setCombatService(combatService);
+        resourceService.setInventoryService(inventoryService);
 
         print("🔗 Dependencias de servicios configuradas:");
         print("  ✅ CombatService ↔ NPCService");
         print("  ✅ CombatService ↔ ResourceService");
         print("  ✅ ResourceService ↔ ToolService");
         print("  ✅ ResourceService ↔ CombatService");
+        print("  ✅ ResourceService ↔ InventoryService");
     }
 } 

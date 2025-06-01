@@ -74,45 +74,6 @@
 ## 🚢 NUEVO SISTEMA DE BARCOS - SIMPLE Y FUNCIONAL
 
 ### ✅ LO QUE FUNCIONA AHORA:
-```
-ANTES:                           AHORA:
-- 800+ líneas de código      →   250 líneas
-- 3 servicios de agua        →   1 servicio simple  
-- 5 métodos de detección     →   Nivel fijo Y=5
-- Raycast complejo           →   BodyPosition estándar
-- WaterSurface = PISO        →   Solo agua visual
-- No se podía conducir       →   ✅ CONTROLES WASD FUNCIONALES
-- Barcos se volcaban         →   ✅ ESTABLES CON BODYGYRO + MASA
-- Superficie pequeña         →   ✅ SUPERFICIE 11x19 STUDS
-- Sistema no funcionaba      →   ✅ FUNCIONA PERFECTAMENTE
-```
-
-### 🌊 AGUA REAL (ARREGLADA):
-- **Ocean**: Parte visual con `CanCollide = false` (ya no puedes caminar sobre el agua)
-- **❌ ELIMINÉ**: `WaterSurface` sólida que era un PISO falso  
-- **Nivel**: Fijo en Y=5 (de IslandService)
-- **Flotación**: Los barcos usan BodyPosition para mantenerse en Y=6.5
-
-### ⚖️ NUEVO: ESTABILIDAD REAL
-- **BodyGyro**: Evita que el barco se voltee al subirse jugadores
-- **CustomPhysicalProperties**: Densidad 2.0 (más masa = más estable)
-- **Superficie Grande**: 11x19 studs para caminar cómodamente
-- **Hull Profundo**: 12x3x20 studs (más volumen = más estabilidad)
-- **Damping Alto**: D=5000 para resistir movimientos bruscos
-- **Auto-Corrección**: Se mantiene derecho automáticamente
-
-### 🎮 CONTROLES DE CONDUCCIÓN (SIN CAMBIOS):
-- **WASD**: Mover el barco (estándar de Roblox)
-- **W**: Acelerar hacia adelante
-- **S**: Reversa
-- **A**: Girar a la izquierda
-- **D**: Girar a la derecha
-- **VehicleSeat**: Sistema estándar de Roblox (asiento rojo)
-- **Auto-Sit**: Te sientas automáticamente al spawnear
-
-### 🎮 FLUJO DE TESTING ACTUALIZADO:
-
-#### 1. Spawning Estable:
 ```bash
 /spawnSimpleBoat TonderFlashh
 ```
@@ -323,3 +284,92 @@ private readonly TURN_SPEED = 5;    // Velocidad de giro
 **✅ MANTENIBLE**: Simple y comprensible  
 
 **🚢 EL SISTEMA DE BARCOS AHORA ES FUNCIONAL, CONDUCIBLE, ESTABLE Y MÍNIMO** 🚢
+
+📦 COMANDOS DE INVENTARIO Y STACKING (ACTUALIZADOS):
+==================================================
+
+/testIcons                              # ✅ MEJORADO: Test sistema de iconos con debug detallado
+/icons                                  # Alias de testIcons
+/ti                                     # Alias corto de testIcons
+/testIconos                             # Alias en español
+/iconos                                 # Alias corto en español
+
+/testAltIcons                           # ✅ NUEVO: Test iconos alternativos para debugging
+/alticons                               # Alias de testAltIcons
+/iconosalt                              # Alias en español de testAltIcons
+/ai                                     # Alias corto de testAltIcons
+
+/openInventory [player]                 # ✅ NUEVO: Abrir inventario desde servidor
+/inventory                              # Alias de openInventory  
+/inv                                    # Alias corto de openInventory
+/open                                   # Alias corto de openInventory
+
+/testStacking [resourceType] [amount]    # ✅ Test sistema de stacking con límites
+/teststack wood 150                      # Prueba dar 150 madera (límite 100)
+/ts iron 200                            # Prueba dar 200 hierro (límite 100)
+/testStacking dragon_scale 15           # Prueba dar 15 escamas dragón (límite 10)
+
+/giveResource [player] [tipo] [cantidad] # ✅ MEJORADO: Ahora con validación de stacking
+/giveResource TonderFlashh wood 50       # Da 50 madera respetando límites
+/giveResource TonderFlashh rope 150      # Da solo 100 cuerda (resto se pierde por límite)
+
+/resetInventory [player]                # ✅ Reset completo del inventario
+
+🔧 NUEVO FLUJO DE TESTING DE ICONOS MEJORADO:
+===========================================
+
+1. **Test iconos primarios**: `/testIcons`
+   - Da 1 de cada recurso básico (wood, rope, cloth, iron)
+   - Muestra iconos esperados: 🪵🪢🧵🔩
+   - Proporciona debug detallado en consola del cliente
+   - Abre automáticamente el inventario para verificar
+
+2. **Test iconos alternativos**: `/testAltIcons` 
+   - Da recursos usando iconos de respaldo: 🌲🎗️🧶⚫
+   - Útil si los iconos primarios no se muestran
+   - Para debugging de compatibilidad de emojis
+
+3. **Abrir inventario manualmente**: `/openInventory`
+   - Abre la GUI del inventario
+   - También funciona con tecla P
+
+4. **Verificar iconos**: 
+   - Primarios: 🪵(madera) 🪢(cuerda) 🧵(tela) 🔩(hierro)
+   - Alternativos: 🌲(madera) 🎗️(cuerda) 🧶(tela) ⚫(hierro)
+   - Si aparecen cuadrados blancos, el emoji no es compatible
+
+🔧 MEJORAS IMPLEMENTADAS EN ICONOS v2.0:
+======================================
+
+✅ **Font optimizado**: Cambié a Enum.Font.SourceSans (mejor compatibilidad con emojis)
+✅ **Tamaño ajustado**: TextSize = 28 (óptimo para renderizado en Roblox)
+✅ **Sistema de fallback triple**: Primario → Alternativo → Texto simple
+✅ **Debug avanzado**: Logging detallado en consola del cliente
+✅ **Comandos múltiples**: /testIcons para primarios, /testAltIcons para alternativos
+✅ **Iconos alternativos**: Sistema completo de emojis de respaldo
+✅ **Manejo robusto**: Validación y error handling mejorado
+
+🎯 DIAGNÓSTICO DE PROBLEMAS DE ICONOS:
+====================================
+
+**PROBLEMA**: Iconos aparecen como cuadrados blancos
+**SOLUCIÓN**: 
+1. Probar `/testAltIcons` para iconos alternativos
+2. Verificar mensajes debug en consola F9
+3. Iconos de texto simple (W, R, C, I) como último recurso
+
+**PROBLEMA**: Solo algunos iconos no funcionan
+**CAUSA**: Compatibilidad específica del emoji con Roblox
+**SOLUCIÓN**: 
+1. El sistema automáticamente usa fallbacks
+2. Revisar logs de debug para ver qué iconos se usan
+3. Iconos específicos que fallan se reemplazan automáticamente
+
+**PROBLEMA**: Inventario no se actualiza
+**SOLUCIÓN**:
+1. Cerrar y reabrir inventario con tecla P
+2. Usar `/openInventory` para forzar apertura
+3. Verificar consola para errores de red
+
+📦 COMANDOS DE INVENTARIO Y RECURSOS:
+====================================

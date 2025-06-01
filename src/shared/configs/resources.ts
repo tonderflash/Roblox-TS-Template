@@ -23,7 +23,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🪢",
         rarity: "common", 
         description: "Cuerda resistente para amarrar y velas",
-        stackSize: 50
+        stackSize: 100
     },
 
     [RESOURCE_TYPES.CLOTH]: {
@@ -33,7 +33,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🧵",
         rarity: "common",
         description: "Tela básica para confeccionar velas",
-        stackSize: 75
+        stackSize: 100
     },
 
     [RESOURCE_TYPES.IRON]: {
@@ -43,7 +43,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🔩",
         rarity: "uncommon",
         description: "Hierro para cañones y refuerzos",
-        stackSize: 50
+        stackSize: 100
     },
 
     // RECURSOS RAROS (Islas específicas)
@@ -54,7 +54,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🌳",
         rarity: "rare",
         description: "Madera resistente para barcos avanzados",
-        stackSize: 50
+        stackSize: 100
     },
 
     [RESOURCE_TYPES.STEEL]: {
@@ -64,7 +64,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "⚙️",
         rarity: "rare",
         description: "Acero forjado para armadura de barcos",
-        stackSize: 25
+        stackSize: 100
     },
 
     [RESOURCE_TYPES.CANVAS]: {
@@ -74,7 +74,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "⛵",
         rarity: "rare",
         description: "Lona de alta calidad para velas resistentes",
-        stackSize: 30
+        stackSize: 100
     },
 
     [RESOURCE_TYPES.GOLD]: {
@@ -84,7 +84,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🪙",
         rarity: "epic",
         description: "Oro para decoraciones y mejoras premium",
-        stackSize: 10
+        stackSize: 100
     },
 
     // RECURSOS LEGENDARIOS (Bosses/eventos)
@@ -95,7 +95,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🐲",
         rarity: "legendary",
         description: "Escama mágica para barcos legendarios de fuego",
-        stackSize: 5
+        stackSize: 10
     },
 
     [RESOURCE_TYPES.GHOST_ESSENCE]: {
@@ -105,7 +105,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "👻",
         rarity: "legendary",
         description: "Esencia etérea para barcos fantasmales",
-        stackSize: 5
+        stackSize: 10
     },
 
     [RESOURCE_TYPES.ICE_CRYSTAL]: {
@@ -115,7 +115,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "❄️",
         rarity: "legendary", 
         description: "Cristal helado para barcos rompehielos",
-        stackSize: 5
+        stackSize: 10
     },
 
     [RESOURCE_TYPES.FIRE_CORE]: {
@@ -125,7 +125,7 @@ export const RESOURCES: Record<string, Resource> = {
         icon: "🔥",
         rarity: "legendary",
         description: "Núcleo ardiente para cañones incendiarios",
-        stackSize: 3
+        stackSize: 10
     }
 };
 
@@ -134,7 +134,60 @@ export const RESOURCES: Record<string, Resource> = {
 // ================================
 
 export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
+    // ================================
+    // HERRAMIENTAS BÁSICAS - PRIORIDAD #2 del plan
+    // ================================
+    
+    stone_pick: {
+        id: "stone_pick",
+        name: "Stone Pick",
+        resultId: "stone_pick",
+        resultType: "item",
+        requirements: [
+            { resourceId: RESOURCE_TYPES.WOOD, amount: 25 },
+            { resourceId: RESOURCE_TYPES.IRON, amount: 15 }, // Usamos Iron en vez de Stone ya que no tenemos Stone resource
+            { resourceId: RESOURCE_TYPES.ROPE, amount: 10 }
+        ],
+        craftingTime: 45, // 45 segundos
+        description: "Pico de piedra para recolección mejorada de minerales",
+        unlockLevel: 1
+    },
+
+    stone_hatchet: {
+        id: "stone_hatchet",
+        name: "Stone Hatchet",
+        resultId: "stone_hatchet",
+        resultType: "item",
+        requirements: [
+            { resourceId: RESOURCE_TYPES.WOOD, amount: 20 },
+            { resourceId: RESOURCE_TYPES.IRON, amount: 10 }, // Usamos Iron en vez de Stone
+            { resourceId: RESOURCE_TYPES.ROPE, amount: 15 }
+        ],
+        craftingTime: 40, // 40 segundos
+        description: "Hacha de piedra para recolección mejorada de madera",
+        unlockLevel: 1
+    },
+
+    simple_boat: {
+        id: "simple_boat",
+        name: "Simple Boat",
+        resultId: "simple_boat",
+        resultType: "boat",
+        requirements: [
+            { resourceId: RESOURCE_TYPES.WOOD, amount: 100 },
+            { resourceId: RESOURCE_TYPES.ROPE, amount: 50 },
+            { resourceId: RESOURCE_TYPES.CLOTH, amount: 25 },
+            { resourceId: RESOURCE_TYPES.IRON, amount: 10 }
+        ],
+        craftingTime: 90, // 1.5 minutos
+        description: "Barco simple y funcional para comenzar tu aventura pirata",
+        unlockLevel: 2
+    },
+
+    // ================================
     // TIER 1 BÁSICOS (Gratis con materiales básicos)
+    // ================================
+    
     basic_fishing_boat: {
         id: "basic_fishing_boat",
         name: "Bote de Pesca Básico",

@@ -1,11 +1,11 @@
 import { OnStart, Service } from "@flamework/core";
-import { Players, RunService, Workspace, TweenService } from "@rbxts/services";
+import { Players, RunService, Workspace, TweenService, ReplicatedStorage } from "@rbxts/services";
 import { Events } from "server/network";
 import { RESOURCES, CRAFTING_RECIPES, getResource, getCraftingRecipe } from "shared/configs/resources";
 import { RESOURCE_TYPES, PlayerResources, ResourceStack } from "shared/types/resources";
 import { ResourceNodeData, ResourceTarget, HarvestingResult, HarvestYield } from "shared/types/harvesting";
 
-// Forward declaration para evitar circular dependency
+// Interfaces para inyección de dependencias
 interface ToolServiceInterface {
     getPlayerTool(player: Player): string;
     calculateDamage(player: Player, resourceType: string, baseDamage: number): number;
@@ -14,6 +14,10 @@ interface ToolServiceInterface {
 
 interface CombatServiceInterface {
     getPlayerCombatData(player: Player): { stats: { damage: number; level: number } } | undefined;
+}
+
+interface InventoryServiceInterface {
+    addResource(player: Player, resourceType: string, amount: number): void;
 }
 
 @Service()
@@ -25,6 +29,7 @@ export class ResourceService implements OnStart {
     private nodeIdCounter = 0;
     private toolService?: ToolServiceInterface;
     private combatService?: CombatServiceInterface;
+    private inventoryService?: InventoryServiceInterface;
 
     onStart(): void {
         this.setupPlayerEvents();
@@ -41,6 +46,10 @@ export class ResourceService implements OnStart {
 
     public setCombatService(combatService: CombatServiceInterface): void {
         this.combatService = combatService;
+    }
+
+    public setInventoryService(inventoryService: InventoryServiceInterface): void {
+        this.inventoryService = inventoryService;
     }
 
     private setupPlayerEvents(): void {
@@ -596,15 +605,32 @@ export class ResourceService implements OnStart {
     }
 
     private giveResourceToPlayer(player: Player, resourceType: string, amount: number): void {
-        const playerRes = this.playerResources.get(player);
-        if (!playerRes) return;
+        // Usar InventoryService si está disponible, sino usar sistema local como fallback
+        if (this.inventoryService) {
+            this.inventoryService.addResource(player, resourceType, amount);
+        } else {
+            // MEJORADO: Fallback al sistema local con validación de stacking
+            const playerRes = this.playerResources.get(player);
+            if (!playerRes) return;
 
-        const currentAmount = playerRes.resources.get(resourceType) || 0;
-        playerRes.resources.set(resourceType, currentAmount + amount);
-        playerRes.lastUpdated = tick();
+            // NUEVO: Obtener información del recurso para validar stackSize
+            const resourceInfo = getResource(resourceType);
+            const maxStack = resourceInfo ? math.min(resourceInfo.stackSize, 100) : 100; // Límite máximo de 100
 
-        // TODO: Notificar al cliente sobre el cambio de recursos
-        // print(`📦 ${player.Name} ahora tiene ${currentAmount + amount}x ${resourceType}`);
+            const currentAmount = playerRes.resources.get(resourceType) || 0;
+            const newAmount = math.min(currentAmount + amount, maxStack);
+            const actualAdded = newAmount - currentAmount;
+            
+            playerRes.resources.set(resourceType, newAmount);
+            playerRes.lastUpdated = tick();
+            
+            // MEJORADO: Mensaje más informativo con validación de stack
+            if (actualAdded < amount) {
+                print(`📦 [Fallback] ${player.Name} obtuvo ${actualAdded}x ${resourceType} (Total: ${newAmount}) - ${amount - actualAdded} perdido por límite de stack`);
+            } else {
+                print(`📦 [Fallback] ${player.Name} obtuvo ${actualAdded}x ${resourceType} (Total: ${newAmount})`);
+            }
+        }
     }
 
     // Métodos públicos para integración con CombatService
