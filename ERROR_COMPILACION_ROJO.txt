@@ -1,0 +1,32 @@
+# ERROR DE COMPILACIÓN Y SINCRONIZACIÓN EN ROJO
+
+## Problema:
+- Los archivos en la carpeta `out/` estaban desactualizados.
+- El código TypeScript fue modificado, pero no se recompiló.
+- Rojo sincronizaba código viejo a Roblox Studio.
+- Los comandos y sistemas nuevos no funcionaban en Studio.
+
+## Síntomas:
+- Comandos como `help` no funcionan.
+- Cambios recientes no aparecen en el juego.
+- El juego parece estar "congelado" en una versión anterior del código.
+
+## Solución:
+1. Elimina la carpeta de compilados:
+   ```bash
+   rm -rf out/
+   ```
+2. Recompila el proyecto:
+   ```bash
+   npm run build
+   ```
+3. Verifica que los archivos en `out/` tengan fecha y hora reciente.
+4. Asegúrate de que Rojo esté corriendo y conectado en Studio.
+
+## Recomendaciones:
+- Usa `npm run build` después de cada cambio importante.
+- Si hay dudas, elimina `out/` y recompila.
+- Usa `npm run watch` para recompilación automática durante el desarrollo.
+
+---
+Si vuelve a pasar, sigue estos pasos y el problema debería resolverse. 

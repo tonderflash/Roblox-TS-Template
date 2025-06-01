@@ -3,6 +3,7 @@ import { Players, RunService, Workspace } from "@rbxts/services";
 import { Events } from "server/network";
 import { AttackType, DamageInfo, PlayerCombatData, CombatStats } from "shared/types/combat";
 import { getDevilFruit } from "shared/configs/fruits";
+import { ResourceTarget } from "shared/types/harvesting";
 
 // Forward declaration para evitar circular dependency
 interface NPCServiceInterface {
@@ -10,13 +11,20 @@ interface NPCServiceInterface {
 	getAllNPCModels(): Map<string, Model>;
 }
 
-type CombatTarget = Player | { type: "npc"; id: string; model: Model };
+// Forward declaration para ResourceService
+interface ResourceServiceInterface {
+	damageResourceNode(nodeId: string, damage: number, attacker: Player, toolType: string): boolean;
+	getAllResourceNodes(): Map<string, ResourceTarget>;
+}
+
+type CombatTarget = Player | { type: "npc"; id: string; model: Model } | { type: "resource"; id: string; model: Model };
 
 @Service()
 export class CombatService implements OnStart {
 	private playerCombatData = new Map<Player, PlayerCombatData>();
 	private activeCooldowns = new Map<Player, Map<string, number>>();
 	private npcService?: NPCServiceInterface;
+	private resourceService?: ResourceServiceInterface;
 
 	onStart(): void {
 		this.setupPlayerEvents();
@@ -28,6 +36,11 @@ export class CombatService implements OnStart {
 	// Método para inyectar NPCService (evita circular dependency)
 	public setNPCService(npcService: NPCServiceInterface): void {
 		this.npcService = npcService;
+	}
+
+	// Método para inyectar ResourceService (evita circular dependency)
+	public setResourceService(resourceService: ResourceServiceInterface): void {
+		this.resourceService = resourceService;
 	}
 
 	private setupPlayerEvents(): void {
@@ -185,6 +198,20 @@ export class CombatService implements OnStart {
 			});
 		}
 
+		// Buscar recursos en rango
+		if (this.resourceService) {
+			const resourceNodes = this.resourceService.getAllResourceNodes();
+			resourceNodes.forEach((resourceTarget, nodeId) => {
+				const resourcePart = resourceTarget.model.PrimaryPart || resourceTarget.model.FindFirstChild("ResourcePart") as Part;
+				if (resourcePart) {
+					const distance = position.sub(resourcePart.Position).Magnitude;
+					if (distance <= range) {
+						targets.push({ type: "resource", id: nodeId, model: resourceTarget.model });
+					}
+				}
+			});
+		}
+
 		return targets;
 	}
 
@@ -204,6 +231,15 @@ export class CombatService implements OnStart {
 					this.giveExperience(attacker, 25); // Experiencia básica por ahora
 				}
 			}
+		} else if (this.isResourceTarget(target)) {
+			// Dañar recurso
+			if (this.resourceService) {
+				const resourceKilled = this.resourceService.damageResourceNode(target.id, damage, attacker, attackType);
+				if (resourceKilled) {
+					// Recurso destruido, dar experiencia al jugador
+					this.giveExperience(attacker, 10); // Experiencia básica por ahora
+				}
+			}
 		} else {
 			// Dañar jugador (código existente)
 			this.dealDamageToPlayer(attacker, target, damage, attackType, position, isCrit);
@@ -212,6 +248,10 @@ export class CombatService implements OnStart {
 
 	private isNPCTarget(target: CombatTarget): target is { type: "npc"; id: string; model: Model } {
 		return typeIs(target, "table") && "type" in target && target.type === "npc";
+	}
+
+	private isResourceTarget(target: CombatTarget): target is { type: "resource"; id: string; model: Model } {
+		return typeIs(target, "table") && "type" in target && target.type === "resource";
 	}
 
 	private dealDamageToPlayer(attacker: Player, target: Player, damage: number, attackType: AttackType, position: Vector3, isCrit: boolean): void {

@@ -51,6 +51,55 @@ _"Islas + Barcos + Combat Básico"_
 - [x] **Navegación fluida entre islas** (<3s load time)
 - [x] **Sistema de spawn/teleport** rápido
 
+### 🔨 **Sistema de Recolección ARK-Style**
+
+**Completions requeridas:**
+
+- [x] **Sistema de recursos básico** (nodos estáticos ya implementados)
+- [ ] **🔄 REFACTOR: Convertir a sistema damage-based ARK-style**
+  - [ ] Nodos de recursos con health/maxHealth system
+  - [ ] Damage calculation para harvesting
+  - [ ] Yield proporcional al daño hecho
+  - [ ] Integración con CombatService existente
+- [ ] **Sistema de herramientas con multiplicadores**:
+  - [ ] Bare Hands (1x damage base, 0.5x efficiency)
+  - [ ] Stone Pick (2x damage, 1.5x stone/metal, 0.8x wood)
+  - [ ] Stone Hatchet (2x damage, 1.5x wood, 0.8x stone/metal)
+  - [ ] Metal Pick (3x damage, 2x stone/metal, 1x wood)
+  - [ ] Metal Hatchet (3x damage, 2x wood, 1x stone/metal)
+- [ ] **Nuevos componentes de código**:
+  - [ ] ToolService.ts (manejo de herramientas y multiplicadores)
+  - [ ] HarvestingCalculator (cálculo de yields)
+  - [ ] ResourceNodeData type (health system para recursos)
+  - [ ] Integración CombatTarget para recursos
+- [ ] **Balancing y testing**:
+  - [ ] Health values para diferentes tipos de recursos
+  - [ ] Multiplicadores balanceados por herramienta
+  - [ ] Comandos de testing para herramientas
+  - [ ] Verificar compatibilidad con sistema existente
+
+**Recursos implementados:**
+
+- [x] Madera (Wood) - de árboles
+- [x] Cuerda (Rope) - de plantas/fibras
+- [x] Tela (Cloth) - de plantas especiales
+- [x] Hierro (Iron) - de rocas metálicas
+
+**Compatibilidad garantizada:**
+
+- ✅ No afecta sistema de combate PvP existente
+- ✅ No afecta sistema de frutas existente
+- ✅ No afecta sistema de NPCs existente
+- ✅ Mantiene comandos de testing actuales
+- ✅ Mantiene sistema de respawn de recursos
+
+**Fórmula de harvesting ARK-style:**
+
+```
+Damage To Deal = Tool Base Damage × Player Melee Stat × Resource Multiplier
+Resources Gained = (Damage Done / Resource Max Health) × Base Yield × Quality Multiplier
+```
+
 ### 🚢 **Sistema de Barcos Personalizables**
 
 **Completions requeridas:**
