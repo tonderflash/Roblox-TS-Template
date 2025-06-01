@@ -1,8 +1,10 @@
 import { OnStart, Service } from "@flamework/core";
+import { Dependency } from "@flamework/core";
 import { Players, RunService, Workspace } from "@rbxts/services";
 import { NPCData, NPCTemplate } from "shared/types/npc";
 import { getNPCTemplate, NPC_TEMPLATES } from "shared/configs/npcs";
 import { CombatService } from "./CombatService";
+import { IslandService } from "./IslandService";
 
 @Service()
 export class NPCService implements OnStart {
@@ -20,48 +22,18 @@ export class NPCService implements OnStart {
 	}
 
 	private setupWorld(): void {
-		// Crear isla básica si no existe
-		let spawnIsland = Workspace.FindFirstChild("SpawnIsland") as Model;
-		if (!spawnIsland) {
-			spawnIsland = this.createBasicIsland();
-		}
-
-		// Spawnear NPCs iniciales
+		task.wait(1);
+		
 		this.spawnInitialNPCs();
 	}
 
-	private createBasicIsland(): Model {
-		const island = new Instance("Model");
-		island.Name = "SpawnIsland";
-		island.Parent = Workspace;
-
-		// Crear terrain básico (una plataforma simple)
-		const basePart = new Instance("Part");
-		basePart.Name = "IslandBase";
-		basePart.Size = new Vector3(200, 10, 200);
-		basePart.Position = new Vector3(0, 0, 0);
-		basePart.Anchored = true;
-		basePart.BrickColor = new BrickColor("Bright green");
-		basePart.Material = Enum.Material.Grass;
-		basePart.Parent = island;
-
-		// Crear spawn point para jugadores
-		const spawnPoint = new Instance("SpawnLocation");
-		spawnPoint.Position = new Vector3(0, 20, 0);
-		spawnPoint.Parent = island;
-
-		print("🏝️ Isla básica creada en el spawn");
-		return island;
-	}
-
 	private spawnInitialNPCs(): void {
-		// Spawnear algunos NPCs básicos alrededor de la isla
 		const spawnPositions = [
-			new Vector3(30, 15, 30),
-			new Vector3(-30, 15, 30),
-			new Vector3(30, 15, -30),
-			new Vector3(-30, 15, -30),
-			new Vector3(50, 15, 0)
+			new Vector3(30, 25, 30),
+			new Vector3(-30, 25, 30),
+			new Vector3(30, 25, -30),
+			new Vector3(-30, 25, -30),
+			new Vector3(50, 25, 0)
 		];
 
 		const npcTypes = ["pirate_thug", "bandit_rookie", "pirate_thug", "bandit_rookie", "marine_soldier"];
@@ -70,6 +42,38 @@ export class NPCService implements OnStart {
 			const npcType = npcTypes[index];
 			if (npcType) {
 				this.spawnNPC(npcType, position);
+			}
+		});
+
+		print("🤖 NPCs iniciales spawneados en spawn_island con alturas corregidas");
+	}
+
+	public spawnNPCsOnIsland(islandId: string): void {
+		const islandService = Dependency<IslandService>();
+		const islandData = islandService.getIslandData(islandId);
+		
+		if (!islandData || !islandData.model) {
+			warn(`❌ No se puede spawnear NPCs en isla: ${islandId}`);
+			return;
+		}
+
+		const npcMarkers: Part[] = [];
+		islandData.model.GetChildren().forEach((child) => {
+			if (child.IsA("Part") && child.Name.find("NPC_Spawn")[0]) {
+				npcMarkers.push(child as Part);
+			}
+		});
+
+		npcMarkers.forEach((marker) => {
+			const markerInfo = marker.FindFirstChild("NPCInfo") as StringValue;
+			if (markerInfo) {
+				const nameParts = marker.Name.split("_");
+				const npcType = nameParts[2];
+				
+				if (npcType && getNPCTemplate(npcType)) {
+					this.spawnNPC(npcType, marker.Position);
+					print(`🤖 NPC ${npcType} spawneado en ${islandId} en posición ${marker.Position}`);
+				}
 			}
 		});
 	}
@@ -83,7 +87,6 @@ export class NPCService implements OnStart {
 
 		const npcId = `${templateId}_${tick()}`;
 		
-		// Crear datos del NPC
 		const npcData: NPCData = {
 			id: npcId,
 			name: template.name,
@@ -100,7 +103,6 @@ export class NPCService implements OnStart {
 			lastAttackedTime: 0
 		};
 
-		// Crear modelo visual del NPC
 		const npcModel = this.createNPCModel(template, position);
 		
 		this.activeNPCs.set(npcId, npcData);
@@ -110,19 +112,16 @@ export class NPCService implements OnStart {
 	}
 
 	private createNPCModel(template: NPCTemplate, position: Vector3): Model {
-		// Crear modelo básico de NPC (dummy simple)
 		const model = new Instance("Model");
 		model.Name = template.name;
 		model.Parent = Workspace;
 
-		// Crear humanoid para el NPC
 		const humanoid = new Instance("Humanoid");
 		humanoid.MaxHealth = template.health;
 		humanoid.Health = template.health;
 		humanoid.WalkSpeed = 8;
 		humanoid.Parent = model;
 
-		// Crear partes básicas del NPC
 		const head = new Instance("Part");
 		head.Name = "Head";
 		head.Size = new Vector3(2, 1, 1);
@@ -146,12 +145,10 @@ export class NPCService implements OnStart {
 		humanoidRootPart.CanCollide = false;
 		humanoidRootPart.Parent = model;
 
-		// Posicionar el modelo
 		humanoidRootPart.Position = position;
 		head.Position = position.add(new Vector3(0, 1.5, 0));
 		torso.Position = position;
 
-		// Crear joints básicos
 		const neck = new Instance("Motor6D");
 		neck.Name = "Neck";
 		neck.Part0 = torso;
@@ -165,7 +162,6 @@ export class NPCService implements OnStart {
 		rootJoint.Part1 = torso;
 		rootJoint.Parent = humanoidRootPart;
 
-		// Crear GUI de nombre
 		const billboardGui = new Instance("BillboardGui");
 		billboardGui.Size = new UDim2(0, 200, 0, 50);
 		billboardGui.StudsOffset = new Vector3(0, 3, 0);
@@ -174,11 +170,26 @@ export class NPCService implements OnStart {
 		const nameLabel = new Instance("TextLabel");
 		nameLabel.Size = new UDim2(1, 0, 1, 0);
 		nameLabel.BackgroundTransparency = 1;
-		nameLabel.Text = template.displayName;
+		nameLabel.Text = `${template.displayName} (Lv.${template.level})`;
 		nameLabel.TextColor3 = new Color3(1, 1, 1);
 		nameLabel.TextScaled = true;
-		nameLabel.Font = Enum.Font.GothamBold;
+		nameLabel.Font = Enum.Font.SourceSansBold;
 		nameLabel.Parent = billboardGui;
+
+		const healthBar = new Instance("Frame");
+		healthBar.Size = new UDim2(1, 0, 0.2, 0);
+		healthBar.Position = new UDim2(0, 0, 0.8, 0);
+		healthBar.BackgroundColor3 = new Color3(1, 0, 0);
+		healthBar.BorderSizePixel = 0;
+		healthBar.Parent = billboardGui;
+
+		const healthBarBg = new Instance("Frame");
+		healthBarBg.Size = new UDim2(1, 2, 1, 2);
+		healthBarBg.Position = new UDim2(0, -1, 0, -1);
+		healthBarBg.BackgroundColor3 = new Color3(0, 0, 0);
+		healthBarBg.BorderSizePixel = 0;
+		healthBarBg.ZIndex = healthBar.ZIndex - 1;
+		healthBarBg.Parent = healthBar;
 
 		return model;
 	}
@@ -197,7 +208,6 @@ export class NPCService implements OnStart {
 			const npcModel = this.npcModels.get(npcId);
 			if (!npcModel) return;
 
-			// Buscar jugadores cercanos para atacar
 			const nearbyPlayer = this.findNearestPlayer(npcData);
 			if (nearbyPlayer) {
 				this.handleNPCCombat(npcData, nearbyPlayer, npcModel);
@@ -228,7 +238,6 @@ export class NPCService implements OnStart {
 	private handleNPCCombat(npcData: NPCData, target: Player, npcModel: Model): void {
 		const currentTime = tick();
 		
-		// Cooldown de ataque de 2 segundos
 		if (currentTime - npcData.lastAttackedTime < 2) return;
 
 		const character = target.Character;
@@ -237,11 +246,9 @@ export class NPCService implements OnStart {
 
 		const distance = npcData.spawnPosition.sub(targetRootPart.Position).Magnitude;
 		
-		// Si está en rango de ataque
 		if (distance <= npcData.attackRange) {
 			npcData.lastAttackedTime = currentTime;
 			
-			// El NPC ataca al jugador
 			this.npcAttackPlayer(npcData, target);
 			
 			print(`⚔️ ${npcData.name} atacó a ${target.Name} por ${npcData.damage} de daño`);
@@ -252,15 +259,12 @@ export class NPCService implements OnStart {
 		const combatData = this.combatService.getPlayerCombatData(target);
 		if (!combatData) return;
 
-		// Aplicar daño al jugador
 		const damage = npcData.damage;
 		combatData.stats.health = math.max(0, combatData.stats.health - damage);
 		
 		print(`💔 ${target.Name} recibió ${damage} de daño de ${npcData.name} - Salud: ${combatData.stats.health}/${combatData.stats.maxHealth}`);
 
-		// Si el jugador muere, manejarlo
 		if (combatData.stats.health <= 0) {
-			// El CombatService ya maneja la muerte del jugador
 			print(`💀 ${target.Name} fue derrotado por ${npcData.name}`);
 		}
 	}
@@ -280,12 +284,10 @@ export class NPCService implements OnStart {
 		const npcData = this.activeNPCs.get(npcId);
 		if (!npcData) return;
 
-		// Restaurar NPC
 		npcData.isAlive = true;
 		npcData.health = npcData.maxHealth;
 		npcData.currentTarget = undefined;
 
-		// Recrear modelo
 		const oldModel = this.npcModels.get(npcId);
 		if (oldModel) {
 			oldModel.Destroy();
@@ -300,35 +302,29 @@ export class NPCService implements OnStart {
 		print(`🔄 ${npcData.name} ha respawneado`);
 	}
 
-	// Método público para cuando un jugador mata un NPC
 	public npcKilled(npcId: string, killer: Player): void {
 		const npcData = this.activeNPCs.get(npcId);
 		if (!npcData || !npcData.isAlive) return;
 
 		npcData.isAlive = false;
 		
-		// Destruir modelo
 		const npcModel = this.npcModels.get(npcId);
 		if (npcModel) {
 			npcModel.Destroy();
 		}
 
-		// Dar experiencia al jugador (esto lo manejaremos en un LevelService)
 		print(`💀 ${npcData.name} fue derrotado por ${killer.Name} - EXP: +${npcData.experienceReward}`);
 
-		// Programar respawn
 		const respawnTime = tick() + npcData.respawnTime;
 		this.respawnTimers.set(npcId, respawnTime);
 
 		print(`⏰ ${npcData.name} respawneará en ${npcData.respawnTime} segundos`);
 	}
 
-	// Método público para obtener NPC por ID
 	public getNPC(npcId: string): NPCData | undefined {
 		return this.activeNPCs.get(npcId);
 	}
 
-	// Método para dañar un NPC (llamado desde CombatService)
 	public damageNPC(npcId: string, damage: number, attacker: Player): boolean {
 		const npcData = this.activeNPCs.get(npcId);
 		if (!npcData || !npcData.isAlive) return false;
@@ -337,16 +333,14 @@ export class NPCService implements OnStart {
 		
 		print(`💔 ${npcData.name} recibió ${damage} de daño de ${attacker.Name} - Salud: ${npcData.health}/${npcData.maxHealth}`);
 
-		// Si el NPC muere
 		if (npcData.health <= 0) {
 			this.npcKilled(npcId, attacker);
-			return true; // NPC murió
+			return true;
 		}
 
-		return false; // NPC sigue vivo
+		return false;
 	}
 
-	// Método público requerido por CombatService
 	public getAllNPCModels(): Map<string, Model> {
 		return this.npcModels;
 	}

@@ -24,6 +24,10 @@ interface ServerEvents {
 	customizeBoat: (customizationId: string) => void;
 	fireCannonAt: (targetPosition: Vector3) => void;
 	repairBoat: () => void;
+	
+	// Boat Navigation Events
+	startBoatNavigation: (direction: Vector3) => void;
+	stopBoatNavigation: () => void;
 }
 
 interface ServerFunctions {}

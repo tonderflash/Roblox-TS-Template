@@ -41,21 +41,27 @@ _"Islas + Barcos + Combat Básico"_
 - [x] **5 NPCs básicos para farmeo** (Pirate Thug, Bandit Rookie, Marine Soldier, etc.)
 - [x] **Sistema de respawn automático** (30-120 segundos)
 - [x] **Detección y IA básica** (NPCs atacan jugadores en rango)
-- [ ] **6-8 islas pequeñas temáticas** (5-10 min para clear)
-  - Isla Pirata (enemies básicos, loot común)
-  - Isla Marina (enemies fuertes, loot militar)
-  - Isla Volcán (fire theme, rare materials)
-  - Isla Hielo (ice theme, building materials)
-  - Isla Jungla (nature theme, frutas raras)
-  - Isla Desierto (sand theme, treasure chests)
-- [ ] **Navegación fluida entre islas** (<3s load time)
-- [ ] **Sistema de spawn/teleport** rápido
+- [x] **6-8 islas pequeñas temáticas** (5-10 min para clear)
+  - [x] Isla Pirata (enemies básicos, loot común) - Bahía Pirata
+  - [x] Isla Marina (enemies fuertes, loot militar) - Base Marina
+  - [x] Isla Volcán (fire theme, rare materials) - Forja del Volcán
+  - [x] Isla Hielo (ice theme, building materials) - Cavernas de Hielo
+  - [x] Isla Jungla (nature theme, frutas raras) - Templo de la Jungla
+  - [x] Isla Desierto (sand theme, treasure chests) - Ruinas del Desierto
+- [x] **Navegación fluida entre islas** (<3s load time)
+- [x] **Sistema de spawn/teleport** rápido
 
 ### 🚢 **Sistema de Barcos Personalizables**
 
 **Completions requeridas:**
 
-- [ ] **Barco base funcional** (movement + health)
+- [x] **Barco base funcional** (movement + health)
+- [x] **Sistema de navegación tipo ARK**
+  - [x] Deck walkable para caminar libremente en el barco
+  - [x] Timón/Helm para control de navegación
+  - [x] Barandas de seguridad y cañones en deck
+  - [x] Sistema anti-volcado y navegación suave
+  - [x] Seat opcional para control del barco
 - [ ] **Sistema de upgrades**:
   - Speed boost (+20/40/60% speed)
   - Armor plating (+50/100/150% HP)
@@ -328,5 +334,68 @@ _"Leaderboards + Competitions + Long-term Retention"_
 **Expected Revenue Curve:** $50 → $200 → $500 → $1000+ USD/mes
 
 ---
+
+## 🎯 **FEATURES NUEVOS IMPLEMENTADOS - FASE 1**
+
+### 🏝️ **Sistema de Islas Graybox Completado**
+
+**✅ Implementado:**
+
+- **Océano masivo** (4000x4000 studs) para navegación libre
+- **7 islas temáticas** generadas como graybox con diferentes temas:
+  - 🏴‍☠️ **Bahía Pirata** - Nivel 2, enemies básicos
+  - 🛡️ **Base Marina** - Nivel 4, enemies militares
+  - 🌋 **Forja del Volcán** - Nivel 6, fire theme
+  - ❄️ **Cavernas de Hielo** - Nivel 5, building materials
+  - 🌿 **Templo de la Jungla** - Nivel 4, nature theme
+  - 🏜️ **Ruinas del Desierto** - Nivel 3, treasure hunting
+- **Docks automáticos** en cada isla para atracar barcos
+- **Marcadores visuales** para spawn points de NPCs (rojos) y recursos (verdes)
+- **Sistema de información** con etiquetas descriptivas en cada isla
+
+### 🚢 **Sistema de Navegación ARK-Style Completado**
+
+**✅ Implementado:**
+
+- **Barcos navegables** con deck walkable de 10x18 studs
+- **Timón/Helm funcional** para control de navegación
+- **Barandas de seguridad** para evitar caerse del barco
+- **Cañones en deck** posicionados en los lados del barco
+- **Sistema anti-volcado** para navegación estable
+- **Seat opcional** para control cómodo del barco
+- **Navegación fluida** con BodyVelocity mejorado (6000 MaxForce)
+- **Control de rotación** con BodyAngularVelocity (8000 MaxTorque)
+
+### 🎮 **Comandos de Testing Implementados**
+
+**✅ Comandos disponibles:**
+
+```bash
+/listislands                    # Ver todas las islas con info detallada
+/tptoisle [player] [islandId]   # Teleportar a isla específica
+/spawnboat [player]             # Spawnear barco mejorado con deck
+/despawnboat [player]           # Despawnear barco
+/listboats                      # Ver barcos disponibles
+```
+
+**Flujo de testing recomendado:**
+
+1. **Ver islas**: `/listislands`
+2. **Teleportarse**: `/tptoisle TonderFlashh pirate_cove`
+3. **Spawnear barco**: `/spawnboat TonderFlashh`
+4. **Navegar libremente** caminando en el deck
+5. **Probar otras islas**: `/tptoisle TonderFlashh volcano_forge`
+
+### 🎯 **Próximos Pasos para Completar Fase 1**
+
+**Pendientes importantes:**
+
+- [ ] **Sistema de controles de navegación** del lado cliente (WASD para mover barco)
+- [ ] **Balancing PvP** (TTK 5-10 segundos)
+- [ ] **Respawn en barco** cuando el jugador muere
+- [ ] **Sistema de upgrades** de barcos (speed, armor, cannons)
+- [ ] **Combate naval** básico (cañón vs cañón)
+
+**🎯 Objetivo inmediato:** Sistema de controles cliente para navegación del barco con WASD + mouse.
 
 _Este template está optimizado para addiction loops, social pressure, y monetización frecuente manteniendo gameplay skill-based y divertido._
