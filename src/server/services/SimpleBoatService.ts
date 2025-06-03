@@ -27,7 +27,63 @@ export class SimpleBoatService implements OnStart {
     private readonly TURN_SPEED = 5; // Velocidad de giro
     
     onStart(): void {
-        print("🚢 SimpleBoatService iniciado - Sistema estable y funcional con controles");
+        print("🚢 SimpleBoatService iniciado - Sistema estable y funcional con controles restringidos a agua");
+    }
+    
+    /**
+     * Detecta si el barco está sobre agua usando raycast
+     * Esta es la mejor práctica según DevForum de Roblox
+     */
+    private isBoatInWater(boat: SimpleBoat): boolean {
+        const hull = boat.hull;
+        const hullPosition = hull.Position;
+        
+        // MÉTODO 1: Verificación simple de altura (rápido)
+        // Si está muy por debajo del nivel del agua, definitivamente no está en agua navegable
+        if (hullPosition.Y < this.WATER_LEVEL - 2) {
+            return false;
+        }
+        
+        // MÉTODO 2: Raycast hacia abajo para detectar qué hay debajo del barco
+        const raycastParams = new RaycastParams();
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
+        raycastParams.FilterDescendantsInstances = [boat.model]; // Excluir el propio barco
+        
+        // Raycast desde el centro del hull hacia abajo
+        const rayOrigin = hullPosition.add(new Vector3(0, 2, 0)); // 2 studs arriba del hull
+        const rayDirection = new Vector3(0, -10, 0); // 10 studs hacia abajo
+        
+        const raycastResult = Workspace.Raycast(rayOrigin, rayDirection, raycastParams);
+        
+        if (raycastResult && raycastResult.Instance) {
+            const hitInstance = raycastResult.Instance;
+            const hitPosition = raycastResult.Position;
+            
+            // VERIFICACIONES PARA DETERMINAR SI ES AGUA:
+            
+            // 1. Si toca el océano creado por IslandService
+            if (hitInstance.Name === "Ocean" && hitInstance.Material === Enum.Material.Water) {
+                return true;
+            }
+            
+            // 2. Si toca cualquier material de agua
+            if (raycastResult.Material === Enum.Material.Water) {
+                return true;
+            }
+            
+            // 3. Si el raycast toca algo sólido muy cerca del nivel del agua, NO es agua navegable
+            if (hitPosition.Y > this.WATER_LEVEL - 1) {
+                return false; // Hay terreno sólido cerca de la superficie
+            }
+        }
+        
+        // MÉTODO 3: Si no toca nada sólido y está cerca del nivel del agua, probablemente es agua
+        if (hullPosition.Y >= this.WATER_LEVEL - 1 && hullPosition.Y <= this.WATER_LEVEL + 3) {
+            return true;
+        }
+        
+        // Por defecto, si hay dudas, no permitir movimiento
+        return false;
     }
     
     /**
@@ -163,7 +219,7 @@ export class SimpleBoatService implements OnStart {
                 owner: player
             };
             
-            // SISTEMA DE CONTROLES Y ESTABILIZACIÓN
+            // SISTEMA DE CONTROLES Y ESTABILIZACIÓN CON RESTRICCIÓN DE AGUA
             const controlConnection = RunService.Heartbeat.Connect(() => {
                 this.updateBoatControls(simpleBoat);
             });
@@ -171,9 +227,9 @@ export class SimpleBoatService implements OnStart {
             simpleBoat.connection = controlConnection;
             this.spawnedBoats.set(player, simpleBoat);
             
-            print(`🚢 ${player.Name} spawneó barco estable y conducible en Y=${spawnPosition.Y}`);
-            print(`🎮 Controles: WASD para mover, superficie amplia para caminar`);
-            print(`⚖️ Estabilidad: BodyGyro + masa custom evita volcarse`);
+            print(`🚢 ${player.Name} spawneó barco estable con restricción de agua en Y=${spawnPosition.Y}`);
+            print(`🌊 Controles: WASD para mover SOLO EN AGUA`);
+            print(`⚖️ Estabilidad: BodyGyro + detección de agua + masa custom`);
             return true;
             
         } catch (error) {
@@ -183,7 +239,7 @@ export class SimpleBoatService implements OnStart {
     }
     
     /**
-     * Actualiza los controles del barco y mantiene estabilidad
+     * Actualiza los controles del barco CON RESTRICCIÓN DE AGUA y mantiene estabilidad
      */
     private updateBoatControls(boat: SimpleBoat): void {
         const seat = boat.seat;
@@ -195,6 +251,34 @@ export class SimpleBoatService implements OnStart {
             boat.bodyAngularVelocity.AngularVelocity = new Vector3(0, 0, 0);
             return;
         }
+        
+        // 🌊 VERIFICAR SI EL BARCO ESTÁ EN AGUA ANTES DE PERMITIR MOVIMIENTO
+        const isInWater = this.isBoatInWater(boat);
+        
+        if (!isInWater) {
+            // ❌ NO ESTÁ EN AGUA - DETENER MOVIMIENTO
+            boat.bodyVelocity.Velocity = new Vector3(0, 0, 0);
+            boat.bodyAngularVelocity.AngularVelocity = new Vector3(0, 0, 0);
+            
+            // Opcional: Mostrar feedback visual o de audio
+            // Esto se podría mover a un evento para el cliente
+            if (math.random() < 0.01) { // Solo ocasionalmente para no spamear
+                print(`🚫 ${boat.owner.Name}: Barco no puede moverse fuera del agua`);
+            }
+            
+            // Mantener flotación aunque no se pueda mover
+            const currentPos = hull.Position;
+            boat.bodyPosition.Position = new Vector3(currentPos.X, this.WATER_LEVEL + 1.5, currentPos.Z);
+            
+            // Mantener estabilidad
+            const currentCFrame = hull.CFrame;
+            const uprightCFrame = new CFrame(currentCFrame.Position, currentCFrame.Position.add(currentCFrame.LookVector));
+            boat.bodyGyro.CFrame = uprightCFrame;
+            
+            return; // Salir temprano - no permitir movimiento
+        }
+        
+        // ✅ ESTÁ EN AGUA - PERMITIR MOVIMIENTO NORMAL
         
         // Obtener inputs del VehicleSeat
         const throttle = seat.Throttle; // -1 a 1 (W/S)
@@ -236,7 +320,7 @@ export class SimpleBoatService implements OnStart {
         boat.model.Destroy();
         this.spawnedBoats.delete(player);
         
-        print(`🗑️ ${player.Name} despawneó su barco estable`);
+        print(`🗑️ ${player.Name} despawneó su barco con restricción de agua`);
         return true;
     }
     
@@ -282,5 +366,16 @@ export class SimpleBoatService implements OnStart {
         
         print(`⚖️ ${player.Name}: Barco estabilizado manualmente`);
         return true;
+    }
+    
+    /**
+     * Método público para verificar si un barco específico está en agua
+     * Útil para debugging o UI
+     */
+    public isPlayerBoatInWater(player: Player): boolean | undefined {
+        const boat = this.spawnedBoats.get(player);
+        if (!boat) return undefined;
+        
+        return this.isBoatInWater(boat);
     }
 } 
