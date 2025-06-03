@@ -26,9 +26,31 @@ export interface CraftingRecipe {
     unlockLevel?: number; // Nivel mínimo requerido
 }
 
+// ACTUALIZADO: Tipo para hotbar items importado desde network
+import { HotbarItem } from "shared/network";
+
 export interface PlayerResources {
     resources: Map<string, number>; // resourceId -> cantidad
+    hotbar?: (HotbarItem | undefined)[]; // NUEVO: Hotbar opcional para compatibilidad
     lastUpdated: number;
+}
+
+// NUEVO: Interface para operaciones transaccionales
+export interface InventoryTransaction {
+    type: "MOVE" | "COPY" | "SWAP";
+    sourceType: "INVENTORY" | "HOTBAR";
+    targetType: "INVENTORY" | "HOTBAR";
+    itemId: string;
+    amount: number;
+    sourceSlot?: number;
+    targetSlot?: number;
+}
+
+// NUEVO: Resultado de transacción
+export interface TransactionResult {
+    success: boolean;
+    error?: string;
+    rollbackData?: any;
 }
 
 // Tipos de recursos básicos

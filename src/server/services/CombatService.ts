@@ -4,6 +4,12 @@ import { Events } from "server/network";
 import { AttackType, DamageInfo, PlayerCombatData, CombatStats } from "shared/types/combat";
 import { getDevilFruit } from "shared/configs/fruits";
 import { ResourceTarget } from "shared/types/harvesting";
+import { 
+	safeValidate, 
+	validateAttackType, 
+	validateFruitId, 
+	validateCombatTarget 
+} from "./resources/types/ResourceServiceTypes";
 
 // Forward declaration para evitar circular dependency
 interface NPCServiceInterface {
@@ -13,7 +19,7 @@ interface NPCServiceInterface {
 
 // Forward declaration para ResourceService
 interface ResourceServiceInterface {
-	damageResourceNode(nodeId: string, damage: number, attacker: Player, toolType: string): boolean;
+	damageResourceNode(nodeId: string, damage: number, attacker: Player, attackType: AttackType): boolean;
 	getAllResourceNodes(): Map<string, ResourceTarget>;
 }
 
@@ -56,11 +62,44 @@ export class CombatService implements OnStart {
 
 	private setupCombatEvents(): void {
 		Events.performAttack.connect((player, attackType, target) => {
-			this.performAttack(player, attackType, target);
+			const validAttackType = safeValidate(
+				validateAttackType,
+				attackType,
+				"performAttack.attackType"
+			);
+
+			if (!validAttackType) {
+				warn(`[CombatService] performAttack: AttackType inválido de ${player.Name}`);
+				return;
+			}
+
+			// target es opcional, puede ser undefined
+			let validTarget: Vector3 | undefined;
+			if (target !== undefined) {
+				validTarget = safeValidate(
+					validateCombatTarget,
+					target,
+					"performAttack.target"
+				);
+				// Si no es válido, continuamos sin target (será undefined)
+			}
+
+			this.performAttack(player, validAttackType, validTarget);
 		});
 
 		Events.equipFruit.connect((player, fruitId) => {
-			this.equipFruit(player, fruitId);
+			const validFruitId = safeValidate(
+				validateFruitId,
+				fruitId,
+				"equipFruit.fruitId"
+			);
+
+			if (!validFruitId) {
+				warn(`[CombatService] equipFruit: FruitId inválido de ${player.Name}`);
+				return;
+			}
+
+			this.equipFruit(player, validFruitId);
 		});
 
 		Events.unequipFruit.connect((player) => {
@@ -86,6 +125,9 @@ export class CombatService implements OnStart {
 
 		this.playerCombatData.set(player, combatData);
 		this.activeCooldowns.set(player, new Map());
+
+		// NUEVO: Enviar estado inicial de salud al cliente
+		Events.onHealthChanged.fire(player, player, stats.health, stats.maxHealth);
 
 		print(`⚔️ Combate inicializado para ${player.Name} - Salud: ${stats.health}/${stats.maxHealth}`);
 	}
@@ -262,6 +304,9 @@ export class CombatService implements OnStart {
 		const previousHealth = targetCombatData.stats.health;
 		targetCombatData.stats.health = math.max(0, targetCombatData.stats.health - damage);
 
+		// NUEVO: Enviar evento de cambio de salud al cliente
+		Events.onHealthChanged.fire(target, target, targetCombatData.stats.health, targetCombatData.stats.maxHealth);
+
 		print(`💔 ${target.Name} recibió ${math.floor(damage)} de daño ${isCrit ? "(CRÍTICO)" : ""} - Salud: ${targetCombatData.stats.health}/${targetCombatData.stats.maxHealth}`);
 
 		// Verificar muerte
@@ -288,6 +333,9 @@ export class CombatService implements OnStart {
 			combatData.stats.health = combatData.stats.maxHealth; // Heal completo al subir
 			combatData.stats.damage += 10;
 			
+			// NUEVO: Enviar evento de cambio de salud cuando sube de nivel
+			Events.onHealthChanged.fire(player, player, combatData.stats.health, combatData.stats.maxHealth);
+			
 			print(`🎉 ${player.Name} subió al nivel ${newLevel}! (${oldLevel} → ${newLevel})`);
 			print(`📈 Nuevos stats - HP: ${combatData.stats.maxHealth}, Daño: ${combatData.stats.damage}`);
 		}
@@ -301,6 +349,9 @@ export class CombatService implements OnStart {
 
 		// Restaurar salud completa
 		combatData.stats.health = combatData.stats.maxHealth;
+		
+		// NUEVO: Enviar evento de cambio de salud cuando resucita
+		Events.onHealthChanged.fire(player, player, combatData.stats.health, combatData.stats.maxHealth);
 		
 		print(`💀 ${player.Name} murió ${killer ? `asesinado por ${killer.Name}` : ""}`);
 		print(`💚 ${player.Name} resucitó con salud completa`);
@@ -400,6 +451,10 @@ export class CombatService implements OnStart {
 		if (!combatData) return;
 
 		combatData.stats.health = math.min(combatData.stats.maxHealth, combatData.stats.health + amount);
+		
+		// NUEVO: Enviar evento de cambio de salud cuando se cura
+		Events.onHealthChanged.fire(player, player, combatData.stats.health, combatData.stats.maxHealth);
+		
 		print(`💚 ${player.Name} se curó ${amount} puntos - Salud: ${combatData.stats.health}/${combatData.stats.maxHealth}`);
 	}
 

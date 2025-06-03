@@ -12,37 +12,56 @@ interface PlayerInventory {
 	lastUpdated: number;
 }
 
+// NUEVO: Tipos para el hotbar
+interface HotbarItem {
+	itemId: string;
+	itemType: "resource" | "tool" | "weapon" | "consumable";
+	amount: number;
+	displayName: string;
+	icon: string;
+}
+
 interface ServerEvents {
 	reflex: {
 		start: () => void;
 	}
 
-	toggleSetting: (setting: Setting) => void;
+	toggleSetting: (setting: unknown) => void;
 	
 	// Combat Events
-	performAttack: (attackType: AttackType, target?: Vector3) => void;
-	equipFruit: (fruitId: string) => void;
+	performAttack: (attackType: unknown, target?: unknown) => void;
+	equipFruit: (fruitId: unknown) => void;
 	unequipFruit: () => void;
 	
 	// Boat Events
 	spawnBoat: () => void;
 	despawnBoat: () => void;
-	upgradeBoat: (upgradeId: string) => void;
-	customizeBoat: (customizationId: string) => void;
-	fireCannonAt: (targetPosition: Vector3) => void;
+	upgradeBoat: (upgradeId: unknown) => void;
+	customizeBoat: (customizationId: unknown) => void;
+	fireCannonAt: (targetPosition: unknown) => void;
 	repairBoat: () => void;
 	
 	// Boat Navigation Events
-	startBoatNavigation: (direction: Vector3) => void;
+	startBoatNavigation: (direction: unknown) => void;
 	stopBoatNavigation: () => void;
 	
 	// GUI Events
 	openInventory: () => void;
 	closeInventory: () => void;
-	craftItem: (recipeId: string) => void;
-	giveResource: (resourceType: string, amount: number) => void;
-	unlockRecipe: (recipeId: string) => void;
+	craftItem: (recipeId: unknown) => void;
+	giveResource: (resourceType: unknown, amount: unknown) => void;
+	unlockRecipe: (recipeId: unknown) => void;
 	resetInventory: () => void;
+	
+	// NUEVO: Hotbar Events
+	useHotbarSlot: (slotIndex: unknown) => void;
+	moveItemToHotbar: (itemId: unknown, fromSlot: unknown, toSlot: unknown) => void;
+	moveHotbarSlot: (fromSlot: unknown, toSlot: unknown) => void;
+	removeItemFromHotbar: (slotIndex: unknown) => void;
+	
+	// NUEVO: Player Stats Events
+	addExperience: (amount: unknown) => void;
+	setLevel: (level: unknown) => void;
 }
 
 interface ServerFunctions {}
@@ -74,8 +93,20 @@ interface ClientEvents {
 	onInventoryOpened: () => void;
 	onInventoryClosed: () => void;
 	onResourceAdded: (resourceType: string, amount: number) => void;
+	onResourceUpdated: (resources: Map<string, number>) => void;
 	onCraftingCompleted: (recipeId: string, success: boolean) => void;
 	onRecipeUnlocked: (recipeId: string) => void;
+	
+	// NUEVO: Player Stats Events
+	onLevelUp: (newLevel: number, totalExperience: number) => void;
+	onExperienceGained: (experienceGained: number, totalExperience: number) => void;
+	onStatsUpdated: (level: number, experience: number, nextLevelExp: number) => void;
+	
+	// NUEVO: Hotbar Events
+	onHotbarUpdated: (hotbarItems: (HotbarItem | undefined)[]) => void;
+	onHotbarSlotUsed: (slotIndex: number, item: HotbarItem) => void;
+	onItemEquipped: (item: HotbarItem) => void;
+	onItemUnequipped: (slotIndex: number) => void;
 }
 
 interface ClientFunctions {}
@@ -86,3 +117,6 @@ export const GlobalFunctions = Networking.createFunction<ServerFunctions, Client
 // Exports con nombres más simples para mayor comodidad
 export const Events = GlobalEvents;
 export const Functions = GlobalFunctions;
+
+// NUEVO: Export del tipo HotbarItem para usar en otros archivos
+export type { HotbarItem };

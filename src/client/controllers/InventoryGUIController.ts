@@ -1,6 +1,7 @@
 import { Controller, OnStart } from "@flamework/core";
 import { Players, UserInputService, GuiService, RunService, Workspace } from "@rbxts/services";
 import { Events } from "client/network";
+import { HotbarItem } from "shared/network";
 import { 
     GUIState, 
     GUITab, 
@@ -25,6 +26,19 @@ export class InventoryGUIController implements OnStart {
     
     // NUEVO: Map para trackear qué tipo de recurso está en qué slot
     private resourceSlotMapping = new Map<string, number>();
+    
+    // MEJORADO: Sistema de Drag & Drop completamente reescrito
+    private isDragging = false;
+    private dragFrame: Frame | undefined;
+    private dragStartSlot: Frame | undefined;
+    private dragItem: HotbarItem | undefined;
+    private lastClickTime = 0;
+    private readonly DOUBLE_CLICK_TIME = 0.3; // Reducido a 300ms para mejor detección
+    private dragConnection: RBXScriptConnection | undefined; // Para RunService
+    private dragOffset = new Vector2(0, 0); // Offset del mouse cuando inicia el drag
+    
+    // NUEVO: Para solucionar ClipDescendants problema
+    private dragSurface: Frame | undefined; // Frame sin ClipDescendants para drag
     
     private playerResources = new Map<string, number>([
         ["wood", 0],
@@ -83,8 +97,8 @@ export class InventoryGUIController implements OnStart {
         // Main Frame con theme pirata
         this.mainFrame = new Instance("Frame");
         this.mainFrame.Name = "MainFrame";
-        this.mainFrame.Size = new UDim2(0, 800, 0, 600);
-        this.mainFrame.Position = new UDim2(0.5, -400, 0.5, -300);
+        this.mainFrame.Size = new UDim2(0, 600, 0, 450);
+        this.mainFrame.Position = new UDim2(0.5, -300, 0.5, -225);
         this.mainFrame.BackgroundColor3 = PIRATE_THEME.backgroundColor;
         this.mainFrame.BorderColor3 = PIRATE_THEME.borderColor;
         this.mainFrame.BorderSizePixel = 3;
@@ -217,6 +231,12 @@ export class InventoryGUIController implements OnStart {
         this.inventoryTab.ScrollBarThickness = 8;
         this.inventoryTab.ScrollBarImageColor3 = PIRATE_THEME.accentColor;
         this.inventoryTab.Parent = this.mainFrame;
+        
+        // CRÍTICO: Habilitar ClipDescendants para el scrolling normal
+        this.inventoryTab.ClipsDescendants = true;
+
+        // NUEVO: Crear superficie de drag sin ClipDescendants
+        this.createDragSurface();
 
         // Grid Layout para slots
         const gridLayout = new Instance("UIGridLayout");
@@ -283,6 +303,24 @@ export class InventoryGUIController implements OnStart {
         amount.Font = Enum.Font.SourceSansBold;
         amount.TextXAlignment = Enum.TextXAlignment.Center;
         amount.Parent = slot;
+
+        // MEJORADO: Detector de eventos más robusto
+        const detector = new Instance("TextButton");
+        detector.Name = "EventDetector";
+        detector.Size = new UDim2(1, 0, 1, 0);
+        detector.BackgroundTransparency = 1;
+        detector.Text = "";
+        detector.Parent = slot;
+
+        // MEJORADO: Manejo de clicks más preciso
+        detector.MouseButton1Click.Connect(() => {
+            this.handleSlotClick(slot);
+        });
+
+        // MEJORADO: Drag iniciado con MouseButton1Down
+        detector.MouseButton1Down.Connect((x: number, y: number) => {
+            this.handleDragStart(slot, new Vector2(x, y));
+        });
 
         return slot;
     }
@@ -422,13 +460,13 @@ export class InventoryGUIController implements OnStart {
     private applyResponsiveScaling(): void {
         if (!this.mainFrame) return;
 
-        // Ajustar tamaño según dispositivo
+        // Ajustar tamaño según dispositivo - TAMAÑOS MÁS PEQUEÑOS
         if (this.deviceSpecs.deviceType === "Mobile") {
-            this.mainFrame.Size = new UDim2(0.9, 0, 0.8, 0);
-            this.mainFrame.Position = new UDim2(0.05, 0, 0.1, 0);
+            this.mainFrame.Size = new UDim2(0.85, 0, 0.65, 0); // REDUCIDO: Era 0.9x0.8, ahora 0.85x0.65
+            this.mainFrame.Position = new UDim2(0.075, 0, 0.175, 0); // AJUSTADO: Para centrar
         } else if (this.deviceSpecs.deviceType === "Tablet") {
-            this.mainFrame.Size = new UDim2(0.8, 0, 0.7, 0);
-            this.mainFrame.Position = new UDim2(0.1, 0, 0.15, 0);
+            this.mainFrame.Size = new UDim2(0.7, 0, 0.6, 0); // REDUCIDO: Era 0.8x0.7, ahora 0.7x0.6
+            this.mainFrame.Position = new UDim2(0.15, 0, 0.2, 0); // AJUSTADO: Para centrar
         }
     }
 
@@ -451,6 +489,15 @@ export class InventoryGUIController implements OnStart {
                 this.toggleInventory();
             } else if (input.KeyCode === Enum.KeyCode.Escape && this.isOpen) {
                 this.closeInventory();
+            }
+        });
+
+        // MEJORADO: Manejo global de mouse up para drag & drop
+        UserInputService.InputEnded.Connect((input, gameProcessed) => {
+            if (input.UserInputType === Enum.UserInputType.MouseButton1) {
+                if (this.isDragging) {
+                    this.handleDragEnd();
+                }
             }
         });
     }
@@ -495,7 +542,7 @@ export class InventoryGUIController implements OnStart {
         // Animación de entrada
         this.mainFrame.Size = new UDim2(0, 0, 0, 0);
         this.mainFrame.TweenSize(
-            new UDim2(0, 800, 0, 600),
+            new UDim2(0, 600, 0, 450),
             Enum.EasingDirection.Out,
             Enum.EasingStyle.Back,
             0.3
@@ -749,5 +796,343 @@ export class InventoryGUIController implements OnStart {
         
         print(`🎯 DEBUG: Using icon for ${resourceType}: ${result} (Primary: ${primaryIcon}, Alt: ${altIcon}, Text: ${textIcon})`);
         return result;
+    }
+
+    // COMPLETAMENTE REESCRITO: Sistema de Drag & Drop mejorado
+    private handleSlotClick(slot: Frame): void {
+        const currentTime = tick();
+        const resourceType = slot.GetAttribute("ResourceType") as string;
+        
+        if (!resourceType || resourceType === "") {
+            return; // Slot vacío, no hacer nada
+        }
+
+        // MEJORADO: Detectar doble click con mejor timing y cancelar drag
+        if (currentTime - this.lastClickTime < this.DOUBLE_CLICK_TIME) {
+            print(`🖱️ Doble click detectado en ${resourceType}`);
+            
+            // NUEVO: Cancelar cualquier drag en progreso
+            if (this.isDragging) {
+                this.cleanupDrag();
+            }
+            
+            this.moveItemToHotbar(slot);
+            // Reset el tiempo para evitar triple clicks accidentales
+            this.lastClickTime = 0;
+        } else {
+            // NUEVO: Solo iniciar tracking de tiempo, no iniciar drag aquí
+            this.lastClickTime = currentTime;
+        }
+    }
+
+    private handleDragStart(slot: Frame, mousePosition: Vector2): void {
+        const resourceType = slot.GetAttribute("ResourceType") as string;
+        const amount = slot.GetAttribute("Amount") as number;
+        
+        if (!resourceType || resourceType === "" || amount <= 0) {
+            return; // Slot vacío, no se puede arrastrar
+        }
+
+        print(`🎯 Iniciando drag para: ${resourceType} x${amount}`);
+
+        this.isDragging = true;
+        this.dragStartSlot = slot;
+        
+        // NUEVO: Mostrar superficie de drag
+        if (this.dragSurface) {
+            this.dragSurface.Visible = true;
+        }
+        
+        // ARREGLADO: No calcular offset - el frame debe seguir exactamente al mouse
+        this.dragOffset = new Vector2(0, 0); // Sin offset para centrar en cursor
+        
+        // Crear item para drag
+        const resourceInfo = getResource(resourceType);
+        this.dragItem = {
+            itemId: resourceType,
+            itemType: "resource",
+            amount: amount,
+            displayName: resourceInfo ? resourceInfo.displayName : resourceType,
+            icon: this.getResourceIcon(resourceType)
+        };
+
+        // Crear frame visual de drag
+        this.createDragFrame();
+        
+        // NUEVO: Iniciar el tracking del mouse con RunService
+        this.startDragTracking();
+        
+        print(`🎯 Drag iniciado: ${resourceType} x${amount}`);
+    }
+
+    private startDragTracking(): void {
+        // Limpiar conexión anterior si existe
+        if (this.dragConnection) {
+            this.dragConnection.Disconnect();
+        }
+
+        // NUEVO: Usar RunService para tracking suave del mouse
+        this.dragConnection = RunService.Heartbeat.Connect(() => {
+            if (this.isDragging && this.dragFrame) {
+                this.updateDragPosition();
+            }
+        });
+    }
+
+    private updateDragPosition(): void {
+        if (!this.dragFrame || !this.isDragging) return;
+
+        // ARREGLADO: Obtener posición actual del mouse
+        const mouse = Players.LocalPlayer.GetMouse();
+        const mousePos = new Vector2(mouse.X, mouse.Y);
+        
+        // ARREGLADO: Usar el GUI principal como parent para posicionamiento absoluto
+        if (this.dragFrame.Parent !== this.gui) {
+            this.dragFrame.Parent = this.gui; // CRÍTICO: Parent directo al ScreenGui para posición absoluta
+        }
+        
+        // ARREGLADO: Centrar el frame en el cursor (frame de 60x60, así que -30 para centrar)
+        const centerOffset = 30; // Mitad del tamaño del frame (60/2)
+        const finalPos = new Vector2(mousePos.X - centerOffset, mousePos.Y - centerOffset);
+        
+        // ARREGLADO: Usar absolute position relativo al ScreenGui (que está en 0,0)
+        this.dragFrame.Position = new UDim2(0, finalPos.X, 0, finalPos.Y);
+    }
+
+    private handleDragEnd(): void {
+        if (!this.isDragging) return;
+
+        print(`🎯 Finalizando drag...`);
+
+        // MEJORADO: Detección de drop con slot específico
+        const mouse = Players.LocalPlayer.GetMouse();
+        const target = mouse.Target;
+        
+        const dropResult = this.isValidDropTarget(target);
+        
+        if (dropResult.isValid && dropResult.slotIndex >= 0) {
+            print(`📍 Drop válido detectado en slot: ${dropResult.slotIndex + 1} (${target?.Name || "unknown"})`);
+            this.moveItemToHotbarSlot(this.dragStartSlot!, dropResult.slotIndex);
+        } else {
+            print(`📍 Drop inválido o fuera del hotbar`);
+        }
+
+        // Limpiar drag state
+        this.cleanupDrag();
+    }
+
+    private createDragFrame(): void {
+        if (!this.dragItem) return;
+
+        // ARREGLADO: Parent directo al ScreenGui para posicionamiento absoluto
+        const parentFrame = this.gui;
+        if (!parentFrame) return;
+
+        this.dragFrame = new Instance("Frame");
+        this.dragFrame.Name = "DragFrame";
+        this.dragFrame.Size = new UDim2(0, 60, 0, 60); // Ligeramente más grande
+        this.dragFrame.BackgroundColor3 = PIRATE_THEME.accentColor;
+        this.dragFrame.BorderColor3 = PIRATE_THEME.borderColor;
+        this.dragFrame.BorderSizePixel = 3;
+        this.dragFrame.ZIndex = 10000; // ZIndex muy alto para estar encima de todo
+        this.dragFrame.Parent = parentFrame; // ARREGLADO: Parent directo al ScreenGui
+
+        // NUEVO: Hacer el frame semi-transparente
+        this.dragFrame.BackgroundTransparency = 0.1;
+
+        // Icon del item siendo arrastrado
+        const icon = new Instance("TextLabel");
+        icon.Name = "DragIcon";
+        icon.Size = new UDim2(0.7, 0, 0.7, 0);
+        icon.Position = new UDim2(0.15, 0, 0.1, 0);
+        icon.BackgroundTransparency = 1;
+        icon.Text = this.dragItem.icon;
+        icon.TextColor3 = PIRATE_THEME.textColor;
+        icon.TextScaled = false;
+        icon.TextSize = 32; // Más grande para mejor visibilidad
+        icon.Font = Enum.Font.SourceSansBold;
+        icon.TextXAlignment = Enum.TextXAlignment.Center;
+        icon.TextYAlignment = Enum.TextYAlignment.Center;
+        icon.ZIndex = 10001;
+        icon.Parent = this.dragFrame;
+
+        // Cantidad con mejor visibilidad
+        const amount = new Instance("TextLabel");
+        amount.Name = "DragAmount";
+        amount.Size = new UDim2(0.5, 0, 0.3, 0);
+        amount.Position = new UDim2(0.5, 0, 0.7, 0);
+        amount.BackgroundColor3 = PIRATE_THEME.primaryColor;
+        amount.BackgroundTransparency = 0.2;
+        amount.Text = tostring(this.dragItem.amount);
+        amount.TextColor3 = PIRATE_THEME.textColor;
+        amount.TextScaled = true;
+        amount.Font = Enum.Font.SourceSansBold;
+        amount.BorderSizePixel = 0;
+        amount.ZIndex = 10001;
+        amount.Parent = this.dragFrame;
+
+        // NUEVO: Esquinas redondeadas para el fondo de cantidad
+        const corner = new Instance("UICorner");
+        corner.CornerRadius = new UDim(0, 4);
+        corner.Parent = amount;
+    }
+
+    private isValidDropTarget(target: BasePart | undefined): { isValid: boolean, slotIndex: number } {
+        if (!target || !target.Parent) return { isValid: false, slotIndex: -1 };
+        
+        // NUEVO: Método mejorado - detectar slot específico del hotbar
+        const mouse = Players.LocalPlayer.GetMouse();
+        const mousePos = new Vector2(mouse.X, mouse.Y);
+        
+        // Buscar directamente el HotbarFrame en PlayerGUI
+        const playerGui = Players.LocalPlayer.FindFirstChild("PlayerGui") as PlayerGui;
+        if (playerGui) {
+            const playerHUD = playerGui.FindFirstChild("PlayerHUD") as ScreenGui;
+            if (playerHUD) {
+                const hotbarFrame = playerHUD.FindFirstChild("HotbarFrame") as Frame;
+                if (hotbarFrame && hotbarFrame.Visible) {
+                    // NUEVO: Buscar todos los slots del hotbar y detectar sobre cuál está el mouse
+                    for (let i = 1; i <= 9; i++) {
+                        const slotName = `HotbarSlot_${i}`;
+                        const slot = hotbarFrame.FindFirstChild(slotName) as Frame;
+                        
+                        if (slot) {
+                            const slotPos = slot.AbsolutePosition;
+                            const slotSize = slot.AbsoluteSize;
+                            
+                            const isWithinX = mousePos.X >= slotPos.X && mousePos.X <= slotPos.X + slotSize.X;
+                            const isWithinY = mousePos.Y >= slotPos.Y && mousePos.Y <= slotPos.Y + slotSize.Y;
+                            
+                            if (isWithinX && isWithinY) {
+                                print(`🎯 Mouse sobre slot específico: ${i} - Posición: ${mousePos.X}, ${mousePos.Y}`);
+                                print(`📍 Slot ${i} área: ${slotPos.X}-${slotPos.X + slotSize.X}, ${slotPos.Y}-${slotPos.Y + slotSize.Y}`);
+                                return { isValid: true, slotIndex: i - 1 }; // -1 porque slots del servidor son 0-indexed
+                            }
+                        }
+                    }
+                    
+                    // FALLBACK: Si está dentro del hotbar pero no detectó slot específico
+                    const hotbarPos = hotbarFrame.AbsolutePosition;
+                    const hotbarSize = hotbarFrame.AbsoluteSize;
+                    
+                    const isWithinX = mousePos.X >= hotbarPos.X && mousePos.X <= hotbarPos.X + hotbarSize.X;
+                    const isWithinY = mousePos.Y >= hotbarPos.Y && mousePos.Y <= hotbarPos.Y + hotbarSize.Y;
+                    
+                    if (isWithinX && isWithinY) {
+                        // NUEVO: Calcular slot basado en posición relativa
+                        const relativeX = mousePos.X - hotbarPos.X;
+                        const slotWidth = hotbarSize.X / 9; // 9 slots
+                        const calculatedSlot = math.floor(relativeX / slotWidth);
+                        const clampedSlot = math.clamp(calculatedSlot, 0, 8);
+                        
+                        print(`🎯 Mouse sobre hotbar (cálculo): slot ${clampedSlot + 1} - Posición: ${mousePos.X}, ${mousePos.Y}`);
+                        print(`📍 Hotbar área: ${hotbarPos.X}-${hotbarPos.X + hotbarSize.X}, ${hotbarPos.Y}-${hotbarPos.Y + hotbarSize.Y}`);
+                        print(`📊 Calculado: relativeX=${relativeX}, slotWidth=${slotWidth}, slot=${clampedSlot}`);
+                        return { isValid: true, slotIndex: clampedSlot };
+                    } else {
+                        print(`📍 Mouse fuera del hotbar - Mouse: ${mousePos.X}, ${mousePos.Y} | Hotbar: ${hotbarPos.X}-${hotbarPos.X + hotbarSize.X}, ${hotbarPos.Y}-${hotbarPos.Y + hotbarSize.Y}`);
+                    }
+                }
+            }
+        }
+        
+        print(`❌ Target inválido: ${target.Name} (no es hotbar)`);
+        return { isValid: false, slotIndex: -1 };
+    }
+
+    private moveItemToHotbarSlot(sourceSlot: Frame, targetSlot: number): void {
+        if (!sourceSlot) return;
+
+        const resourceType = sourceSlot.GetAttribute("ResourceType") as string;
+        const amount = sourceSlot.GetAttribute("Amount") as number;
+        
+        if (!resourceType || amount <= 0) return;
+
+        print(`📦➡️🎮 Moviendo ${resourceType} x${amount} al hotbar slot ${targetSlot + 1}`);
+
+        // Crear HotbarItem
+        const resourceInfo = getResource(resourceType);
+        const hotbarItem: HotbarItem = {
+            itemId: resourceType,
+            itemType: "resource",
+            amount: amount,
+            displayName: resourceInfo ? resourceInfo.displayName : resourceType,
+            icon: this.getResourceIcon(resourceType)
+        };
+
+        // ARREGLADO: Disparar evento con slot específico
+        Events.moveItemToHotbar.fire(hotbarItem.itemId, this.getSlotIndex(sourceSlot), targetSlot);
+        
+        // Remover del inventario
+        this.removeResourceFromInventory(resourceType, amount);
+    }
+
+    private moveItemToHotbar(sourceSlot: Frame): void {
+        // WRAPPER: Usar -1 para que el servidor elija el slot automáticamente
+        this.moveItemToHotbarSlot(sourceSlot, -1);
+    }
+
+    private removeResourceFromInventory(resourceType: string, amount: number): void {
+        const current = this.playerResources.get(resourceType) || 0;
+        const newAmount = math.max(0, current - amount);
+        
+        if (newAmount > 0) {
+            this.playerResources.set(resourceType, newAmount);
+        } else {
+            this.playerResources.delete(resourceType);
+            this.resourceSlotMapping.delete(resourceType);
+        }
+        
+        this.refreshInventoryDisplay();
+    }
+
+    private getSlotIndex(slot: Frame): number {
+        for (let i = 0; i < this.inventorySlots.size(); i++) {
+            if (this.inventorySlots[i] === slot) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private cleanupDrag(): void {
+        this.isDragging = false;
+        this.dragStartSlot = undefined;
+        this.dragItem = undefined;
+        this.dragOffset = new Vector2(0, 0);
+        
+        // NUEVO: Ocultar superficie de drag
+        if (this.dragSurface) {
+            this.dragSurface.Visible = false;
+        }
+        
+        // NUEVO: Desconectar RunService
+        if (this.dragConnection) {
+            this.dragConnection.Disconnect();
+            this.dragConnection = undefined;
+        }
+        
+        if (this.dragFrame) {
+            this.dragFrame.Destroy();
+            this.dragFrame = undefined;
+        }
+        
+        print(`🎯 Drag cleanup completado`);
+    }
+
+    // NUEVO: Crear superficie de drag sin ClipDescendants
+    private createDragSurface(): void {
+        if (!this.mainFrame) return;
+
+        // Frame transparente que cubre toda el área de la ventana para drag libre
+        this.dragSurface = new Instance("Frame");
+        this.dragSurface.Name = "DragSurface";
+        this.dragSurface.Size = new UDim2(1, 0, 1, 0);
+        this.dragSurface.Position = new UDim2(0, 0, 0, 0);
+        this.dragSurface.BackgroundTransparency = 1;
+        this.dragSurface.ClipsDescendants = false; // CRÍTICO: Permite drag libre
+        this.dragSurface.ZIndex = 5000; // Encima del contenido normal
+        this.dragSurface.Visible = false; // Solo visible durante drag
+        this.dragSurface.Parent = this.mainFrame;
     }
 } 

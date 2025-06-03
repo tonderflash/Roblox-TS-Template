@@ -1,51 +1,68 @@
 import { OnStart, Service } from "@flamework/core";
 import { Dependency } from "@flamework/core";
-import { Players, RunService, Workspace } from "@rbxts/services";
+import { Workspace } from "@rbxts/services";
 import { NPCData, NPCTemplate } from "shared/types/npc";
-import { getNPCTemplate, NPC_TEMPLATES } from "shared/configs/npcs";
-import { CombatService } from "./CombatService";
+import { getNPCTemplate } from "shared/configs/npcs";
+import { getIslandTemplate } from "shared/configs/islands";
 import { IslandService } from "./IslandService";
 
 @Service()
 export class NPCService implements OnStart {
 	private activeNPCs = new Map<string, NPCData>();
 	private npcModels = new Map<string, Model>();
-	private respawnTimers = new Map<string, number>();
-
-	constructor(private combatService: CombatService) {}
 
 	onStart(): void {
 		this.setupWorld();
-		this.startNPCLoop();
-		this.combatService.setNPCService(this);
 		print("🤖 NPCService iniciado correctamente!");
 	}
 
 	private setupWorld(): void {
 		task.wait(1);
-		
 		this.spawnInitialNPCs();
 	}
 
 	private spawnInitialNPCs(): void {
+		// SPAWN NPCs EN ISLA DE INICIO usando RAYCAST
+		print("🔍 Iniciando spawn de NPCs con raycast en Isla de Inicio...");
+		
 		const spawnPositions = [
-			new Vector3(30, 25, 30),
-			new Vector3(-30, 25, 30),
-			new Vector3(30, 25, -30),
-			new Vector3(-30, 25, -30),
-			new Vector3(50, 25, 0)
+			new Vector3(30, 50, 30),    // Empezar desde arriba, raycast encontrará la superficie
+			new Vector3(-30, 50, 30),
+			new Vector3(30, 50, -30),
+			new Vector3(-30, 50, -30),
+			new Vector3(50, 50, 0)
 		];
 
 		const npcTypes = ["pirate_thug", "bandit_rookie", "pirate_thug", "bandit_rookie", "marine_soldier"];
 
-		spawnPositions.forEach((position, index) => {
+		spawnPositions.forEach((basePosition, index) => {
 			const npcType = npcTypes[index];
 			if (npcType) {
-				this.spawnNPC(npcType, position);
+				// Usar raycast para encontrar superficie real
+				const validPosition = this.findValidNPCSpawnPosition(basePosition, 15);
+				
+				if (validPosition) {
+					this.spawnNPC(npcType, validPosition);
+					print(`🤖 NPC inicial ${npcType} spawneado en superficie real: ${validPosition}`);
+				} else {
+					// Respaldo: posición MUY ALTA para que sea visible
+					const highPosition = basePosition.add(new Vector3(0, 100, 0));
+					this.spawnNPC(npcType, highPosition);
+					warn(`⚠️ NPC ${npcType} spawneado en posición elevada: ${highPosition}`);
+				}
 			}
 		});
 
-		print("🤖 NPCs iniciales spawneados en spawn_island con alturas corregidas");
+		// TAMBIÉN SPAWNEAR NPCs EN OTRAS ISLAS
+		print("🔍 Spawneando NPCs en todas las islas...");
+		
+		const islandIds = ["pirate_cove", "marine_base", "jungle_temple", "desert_ruins", "ice_caverns", "volcano_forge"];
+		
+		islandIds.forEach((islandId) => {
+			this.spawnNPCsOnIsland(islandId);
+		});
+
+		print("🤖 Todos los NPCs spawneados usando sistema de raycast");
 	}
 
 	public spawnNPCsOnIsland(islandId: string): void {
@@ -57,25 +74,122 @@ export class NPCService implements OnStart {
 			return;
 		}
 
-		const npcMarkers: Part[] = [];
-		islandData.model.GetChildren().forEach((child) => {
-			if (child.IsA("Part") && child.Name.find("NPC_Spawn")[0]) {
-				npcMarkers.push(child as Part);
-			}
-		});
+		// Obtener template de la isla para los spawn points originales
+		const template = getIslandTemplate(islandId);
+		if (!template) {
+			warn(`❌ Template de isla no encontrado: ${islandId}`);
+			return;
+		}
 
-		npcMarkers.forEach((marker) => {
-			const markerInfo = marker.FindFirstChild("NPCInfo") as StringValue;
-			if (markerInfo) {
-				const nameParts = marker.Name.split("_");
-				const npcType = nameParts[2];
+		// Spawnear NPCs usando raycast para encontrar superficie real
+		for (const npcSpawn of template.npcSpawns) {
+			for (let i = 0; i < npcSpawn.maxActive; i++) {
+				// Usar el spawn point original como centro aproximado
+				const originalSpawnPoint = npcSpawn.spawnPoints[i % npcSpawn.spawnPoints.size()];
 				
-				if (npcType && getNPCTemplate(npcType)) {
-					this.spawnNPC(npcType, marker.Position);
-					print(`🤖 NPC ${npcType} spawneado en ${islandId} en posición ${marker.Position}`);
+				// Buscar superficie real con raycast
+				const validPosition = this.findValidNPCSpawnPosition(originalSpawnPoint, npcSpawn.respawnRadius);
+				
+				if (validPosition) {
+					this.spawnNPC(npcSpawn.npcType, validPosition);
+					print(`🤖 NPC ${npcSpawn.npcType} spawneado en ${islandId} en superficie real: ${validPosition}`);
+				} else {
+					warn(`⚠️ No se pudo encontrar superficie válida para NPC ${npcSpawn.npcType} en ${islandId}`);
 				}
 			}
-		});
+		}
+	}
+
+	private findValidNPCSpawnPosition(centerPosition: Vector3, searchRadius: number): Vector3 | undefined {
+		const maxAttempts = 15;
+		
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			// Generar posición aleatoria en un radio alrededor del punto original
+			const randomAngle = math.random() * math.pi * 2;
+			const randomDistance = math.random() * searchRadius;
+			
+			const testX = centerPosition.X + math.cos(randomAngle) * randomDistance;
+			const testZ = centerPosition.Z + math.sin(randomAngle) * randomDistance;
+			
+			// MÉTODO SIMPLE Y PROBADO: Raycast desde MUY ARRIBA hacia abajo
+			const rayOrigin = new Vector3(testX, centerPosition.Y + 300, testZ); // 300 studs arriba
+			const rayDirection = new Vector3(0, -500, 0); // 500 studs hacia abajo
+			
+			// Sin filtros complejos - permitir que detecte TODO
+			const raycastParams = new RaycastParams();
+			raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
+			raycastParams.FilterDescendantsInstances = []; // NO filtrar nada inicialmente
+			
+			const raycastResult = Workspace.Raycast(rayOrigin, rayDirection, raycastParams);
+			
+			if (raycastResult && raycastResult.Instance) {
+				const hitInstance = raycastResult.Instance;
+				const hitPosition = raycastResult.Position;
+				
+				print(`🔍 RAYCAST HIT: ${hitInstance.Name} (${hitInstance.ClassName}) at Y=${hitPosition.Y}`);
+				
+				// VERIFICACIONES SIMPLES Y DIRECTAS:
+				
+				// 1. Debe estar por ENCIMA del nivel del agua (Y > 8)
+				if (hitPosition.Y <= 8) {
+					print(`❌ Posición demasiado baja (Y=${hitPosition.Y}) - probablemente agua`);
+					continue;
+				}
+				
+				// 2. NO debe ser océano
+				if (hitInstance.Name === "Ocean" || hitInstance.Material === Enum.Material.Water) {
+					print(`❌ Detectó agua: ${hitInstance.Name}`);
+					continue;
+				}
+				
+				// 3. Verificar superficie no muy inclinada (menos de 45 grados)
+				const surfaceNormal = raycastResult.Normal;
+				const angleFromVertical = math.acos(surfaceNormal.Dot(new Vector3(0, 1, 0)));
+				
+				if (angleFromVertical > math.rad(45)) {
+					print(`❌ Superficie muy inclinada: ${math.deg(angleFromVertical)}°`);
+					continue;
+				}
+				
+				// 4. Verificar que no esté muy cerca de otros NPCs
+				const proposedPosition = hitPosition.add(new Vector3(0, 3, 0)); // 3 studs arriba
+				
+				if (!this.isPositionFarFromOtherNPCs(proposedPosition, 8)) {
+					print(`❌ Muy cerca de otro NPC`);
+					continue;
+				}
+				
+				// ✅ POSICIÓN VÁLIDA ENCONTRADA
+				print(`✅ POSICIÓN VÁLIDA: ${proposedPosition} - Superficie: ${hitInstance.Name} (${hitInstance.ClassName})`);
+				return proposedPosition;
+			} else {
+				print(`❌ Raycast no detectó nada en (${testX}, ${testZ})`);
+			}
+		}
+		
+		// RESPALDO: Si no encuentra nada, usar altura fija MUY ALTA
+		const fallbackPosition = centerPosition.add(new Vector3(
+			(math.random() - 0.5) * 10,
+			100, // MUY ARRIBA para que sea visible
+			(math.random() - 0.5) * 10
+		));
+		
+		warn(`⚠️ NO SE ENCONTRÓ SUPERFICIE VÁLIDA después de ${maxAttempts} intentos`);
+		warn(`🚨 USANDO POSICIÓN ELEVADA: ${fallbackPosition}`);
+		warn(`💡 VERIFICA que hay terreno sólido en la isla, no solo plataformas generadas`);
+		return fallbackPosition;
+	}
+
+	private isPositionFarFromOtherNPCs(position: Vector3, minDistance: number): boolean {
+		for (const [, npcModel] of pairs(this.npcModels)) {
+			if (npcModel && npcModel.PrimaryPart) {
+				const distance = position.sub(npcModel.PrimaryPart.Position).Magnitude;
+				if (distance < minDistance) {
+					return false; // Demasiado cerca de otro NPC
+				}
+			}
+		}
+		return true; // Posición válida
 	}
 
 	private spawnNPC(templateId: string, position: Vector3): void {
@@ -194,132 +308,9 @@ export class NPCService implements OnStart {
 		return model;
 	}
 
-	private startNPCLoop(): void {
-		RunService.Heartbeat.Connect(() => {
-			this.updateNPCs();
-			this.handleRespawns();
-		});
-	}
-
-	private updateNPCs(): void {
-		this.activeNPCs.forEach((npcData, npcId) => {
-			if (!npcData.isAlive) return;
-
-			const npcModel = this.npcModels.get(npcId);
-			if (!npcModel) return;
-
-			const nearbyPlayer = this.findNearestPlayer(npcData);
-			if (nearbyPlayer) {
-				this.handleNPCCombat(npcData, nearbyPlayer, npcModel);
-			}
-		});
-	}
-
-	private findNearestPlayer(npcData: NPCData): Player | undefined {
-		let nearestPlayer: Player | undefined;
-		let nearestDistance = npcData.detectionRange;
-
-		Players.GetPlayers().forEach((player) => {
-			const character = player.Character;
-			const humanoidRootPart = character?.FindFirstChild("HumanoidRootPart") as Part;
-			
-			if (humanoidRootPart) {
-				const distance = npcData.spawnPosition.sub(humanoidRootPart.Position).Magnitude;
-				if (distance < nearestDistance) {
-					nearestDistance = distance;
-					nearestPlayer = player;
-				}
-			}
-		});
-
-		return nearestPlayer;
-	}
-
-	private handleNPCCombat(npcData: NPCData, target: Player, npcModel: Model): void {
-		const currentTime = tick();
-		
-		if (currentTime - npcData.lastAttackedTime < 2) return;
-
-		const character = target.Character;
-		const targetRootPart = character?.FindFirstChild("HumanoidRootPart") as Part;
-		if (!targetRootPart) return;
-
-		const distance = npcData.spawnPosition.sub(targetRootPart.Position).Magnitude;
-		
-		if (distance <= npcData.attackRange) {
-			npcData.lastAttackedTime = currentTime;
-			
-			this.npcAttackPlayer(npcData, target);
-			
-			print(`⚔️ ${npcData.name} atacó a ${target.Name} por ${npcData.damage} de daño`);
-		}
-	}
-
-	private npcAttackPlayer(npcData: NPCData, target: Player): void {
-		const combatData = this.combatService.getPlayerCombatData(target);
-		if (!combatData) return;
-
-		const damage = npcData.damage;
-		combatData.stats.health = math.max(0, combatData.stats.health - damage);
-		
-		print(`💔 ${target.Name} recibió ${damage} de daño de ${npcData.name} - Salud: ${combatData.stats.health}/${combatData.stats.maxHealth}`);
-
-		if (combatData.stats.health <= 0) {
-			print(`💀 ${target.Name} fue derrotado por ${npcData.name}`);
-		}
-	}
-
-	private handleRespawns(): void {
-		const currentTime = tick();
-		
-		this.respawnTimers.forEach((respawnTime, npcId) => {
-			if (currentTime >= respawnTime) {
-				this.respawnNPC(npcId);
-				this.respawnTimers.delete(npcId);
-			}
-		});
-	}
-
-	private respawnNPC(npcId: string): void {
-		const npcData = this.activeNPCs.get(npcId);
-		if (!npcData) return;
-
-		npcData.isAlive = true;
-		npcData.health = npcData.maxHealth;
-		npcData.currentTarget = undefined;
-
-		const oldModel = this.npcModels.get(npcId);
-		if (oldModel) {
-			oldModel.Destroy();
-		}
-
-		const template = getNPCTemplate(npcData.name.lower().gsub(" ", "_")[0] as string);
-		if (template) {
-			const newModel = this.createNPCModel(template, npcData.spawnPosition);
-			this.npcModels.set(npcId, newModel);
-		}
-
-		print(`🔄 ${npcData.name} ha respawneado`);
-	}
-
-	public npcKilled(npcId: string, killer: Player): void {
-		const npcData = this.activeNPCs.get(npcId);
-		if (!npcData || !npcData.isAlive) return;
-
-		npcData.isAlive = false;
-		
-		const npcModel = this.npcModels.get(npcId);
-		if (npcModel) {
-			npcModel.Destroy();
-		}
-
-		print(`💀 ${npcData.name} fue derrotado por ${killer.Name} - EXP: +${npcData.experienceReward}`);
-
-		const respawnTime = tick() + npcData.respawnTime;
-		this.respawnTimers.set(npcId, respawnTime);
-
-		print(`⏰ ${npcData.name} respawneará en ${npcData.respawnTime} segundos`);
-	}
+	// ========================================
+	// MÉTODOS PÚBLICOS USADOS POR OTROS SERVICIOS
+	// ========================================
 
 	public getNPC(npcId: string): NPCData | undefined {
 		return this.activeNPCs.get(npcId);
@@ -343,5 +334,19 @@ export class NPCService implements OnStart {
 
 	public getAllNPCModels(): Map<string, Model> {
 		return this.npcModels;
+	}
+
+	private npcKilled(npcId: string, killer: Player): void {
+		const npcData = this.activeNPCs.get(npcId);
+		if (!npcData || !npcData.isAlive) return;
+
+		npcData.isAlive = false;
+		
+		const npcModel = this.npcModels.get(npcId);
+		if (npcModel) {
+			npcModel.Destroy();
+		}
+
+		print(`💀 ${npcData.name} fue derrotado por ${killer.Name} - EXP: +${npcData.experienceReward}`);
 	}
 } 

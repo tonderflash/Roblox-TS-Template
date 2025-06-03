@@ -4,6 +4,12 @@ import { Events } from "server/network";
 import { ResourceService } from "./ResourceService";
 import { getCraftingRecipe, CRAFTING_RECIPES, getResource } from "shared/configs/resources";
 import { CraftingRecipe, ResourceStack } from "shared/types/resources";
+import { 
+    safeValidate, 
+    validateRecipeId, 
+    validateResourceType, 
+    validateResourceAmount 
+} from "./resources/types/ResourceServiceTypes";
 
 export interface PlayerInventory {
     resources: Map<string, number>;
@@ -47,16 +53,60 @@ export class InventoryService implements OnStart {
 
         // Crafting Events
         Events.craftItem.connect((player, recipeId) => {
-            this.craftItem(player, recipeId);
+            const validRecipeId = safeValidate(
+                validateRecipeId,
+                recipeId,
+                "craftItem.recipeId"
+            );
+
+            if (!validRecipeId) {
+                warn(`[InventoryService] craftItem: RecipeId inválido de ${player.Name}`);
+                return;
+            }
+
+            this.craftItem(player, validRecipeId);
         });
 
         // Testing Events
         Events.giveResource.connect((player, resourceType, amount) => {
-            this.giveResource(player, resourceType, amount);
+            const validResourceType = safeValidate(
+                validateResourceType,
+                resourceType,
+                "giveResource.resourceType"
+            );
+
+            if (!validResourceType) {
+                warn(`[InventoryService] giveResource: ResourceType inválido de ${player.Name}`);
+                return;
+            }
+
+            const validAmount = safeValidate(
+                validateResourceAmount,
+                amount,
+                "giveResource.amount"
+            );
+
+            if (!validAmount) {
+                warn(`[InventoryService] giveResource: Amount inválido de ${player.Name}`);
+                return;
+            }
+
+            this.giveResource(player, validResourceType, validAmount);
         });
 
         Events.unlockRecipe.connect((player, recipeId) => {
-            this.unlockRecipe(player, recipeId);
+            const validRecipeId = safeValidate(
+                validateRecipeId,
+                recipeId,
+                "unlockRecipe.recipeId"
+            );
+
+            if (!validRecipeId) {
+                warn(`[InventoryService] unlockRecipe: RecipeId inválido de ${player.Name}`);
+                return;
+            }
+
+            this.unlockRecipe(player, validRecipeId);
         });
 
         Events.resetInventory.connect((player) => {

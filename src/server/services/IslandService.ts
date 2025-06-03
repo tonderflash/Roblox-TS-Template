@@ -51,7 +51,7 @@ export class IslandService implements OnStart {
 
         // CORREGIDO: Calcular altura correcta de la isla por encima del agua
         const waterLevel = 5; // Nivel del agua FIJO en 5
-        const islandHeight = waterLevel + (template.size.Y / 2) + 2; // Isla 2 studs por encima del agua
+        const islandHeight = waterLevel + (template.size.Y / 2) + 0.5; // Isla 0.5 studs por encima del agua
         const correctedPosition = new Vector3(
             template.position.X, 
             islandHeight, 
