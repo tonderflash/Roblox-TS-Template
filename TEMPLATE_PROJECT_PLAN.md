@@ -24,7 +24,7 @@
 - **Loot-driven economy** → trading y FOMO
 - **Fast respawn/rebuild** → low frustration, high action
 
-**🏆 LOGRO ARQUITECTURAL MAYOR COMPLETADO:**
+**🏆 LOGROS ARQUITECTURALES MAYORES COMPLETADOS:**
 
 - **✅ SISTEMA DE DRAG & DROP PROFESIONAL** implementado con **arquitectura de calidad AAA**
 - **✅ SINGLE SOURCE OF TRUTH** eliminando duplicación de datos entre servicios
@@ -32,8 +32,18 @@
 - **✅ INTEGRIDAD DE DATOS** garantizada - no más duplicación de items
 - **✅ API PROFESIONAL** para testing y debugging comprehensivo
 - **✅ CÓDIGO MANTENIBLE** con responsabilidades claras y arquitectura modular
+- **✅ SISTEMA DE BARCOS CUSTOM ROBUSTO** con spawning inteligente y debug profesional
 
-_Este logro arquitectural establece las bases para un desarrollo escalable y profesional del resto del proyecto._
+**🚢 NUEVO LOGRO TÉCNICO - SISTEMA DE BARCOS CUSTOM:**
+
+- **✅ SPAWNING MULTI-MÉTODO** con 4 niveles de fallback para máxima compatibilidad
+- **✅ POSICIONAMIENTO DIRECCIONAL** preciso delante del jugador usando flatLookDirection
+- **✅ DEBUG INTENSIVO** con logs detallados para troubleshooting profesional
+- **✅ ARQUITECTURA DE CONEXIONES** mejorada eliminando errores de memoria
+- **✅ DESANCLADO AUTOMÁTICO** para compatibilidad universal con modelos custom
+- **✅ VALIDACIÓN ROBUSTA** con verificación de distancia y reposicionamiento automático
+
+_Estos logros arquitecturales establecen las bases para un desarrollo escalable y profesional del resto del proyecto._
 
 ---
 
@@ -299,6 +309,38 @@ _**¡Sistema completamente reestructurado con calidad de código de estudio AAA!
   - [x] Barandas de seguridad y cañones en deck
   - [x] Sistema anti-volcado y navegación suave
   - [x] Seat opcional para control del barco
+- [x] **✅ SISTEMA DE BARCOS CUSTOM COMPLETADO** (SimpleBoatService)
+  - [x] **Spawning robusto con múltiples métodos de posicionamiento**:
+    - Método 1: PrimaryPart automático si existe
+    - Método 2: Configuración inteligente de PrimaryPart (busca Hull, Main, Base, Primary)
+    - Método 3: Posicionamiento forzado parte por parte como fallback
+    - Método de emergencia: Posicionamiento manual de todas las BaseParts
+  - [x] **Sistema de desanclado automático** para todas las partes del modelo
+  - [x] **Posicionamiento direccional preciso** delante del jugador:
+    - Cálculo con flatLookDirection (solo X,Z, ignorando Y)
+    - Distancia configurable (20 studs para testing)
+    - Verificación de distancia con reposicionamiento automático
+  - [x] **Debug intensivo implementado** con logs detallados:
+    - Posición del jugador y dirección (LookVector)
+    - Posición objetivo calculada
+    - Información de PrimaryPart configuración
+    - Posición antes/después del workspace
+    - Verificación de distancia del objetivo
+    - Resumen final con todas las coordenadas
+  - [x] **Arquitectura de conexiones mejorada**:
+    - Corrección del error "BoatControlConnection is not a valid member"
+    - Almacenamiento correcto de conexiones en el objeto boat
+    - Cleanup automático al despawnear barcos
+  - [x] **Validación y verificación robusta**:
+    - Verificación de disponibilidad de modelo custom
+    - Búsqueda automática de VehicleSeat en el modelo
+    - Verificación de posición final vs posición objetivo
+    - Sistema de retry automático si la distancia es incorrecta
+- [x] **Sistema de modelos custom funcional**:
+  - Soporte para modelos en ReplicatedStorage.BoatModels
+  - Clonación y configuración automática de modelos
+  - Preservación de la estructura original del modelo
+  - Sistema de física heredado (BodyVelocity + BodyAngularVelocity)
 - [ ] **Sistema de upgrades**:
   - Speed boost (+20/40/60% speed)
   - Armor plating (+50/100/150% HP)
@@ -325,6 +367,67 @@ _**¡Sistema completamente reestructurado con calidad de código de estudio AAA!
   - Combos simples pero satisfactorios
   - Escape mechanics para evitar spawn camping
 - [ ] **Respawn instantáneo** en barco o base
+
+### 🎮 **Comandos de Testing Implementados**
+
+**✅ Comandos disponibles:**
+
+```bash
+/listislands                    # Ver todas las islas con info detallada
+/tptoisle [player] [islandId]   # Teleportar a isla específica
+/spawnboat [player]             # Spawnear barco mejorado con deck
+/despawnboat [player]           # Despawnear barco
+/listboats                      # Ver barcos disponibles
+```
+
+**✅ NUEVOS Comandos de Barcos Custom:**
+
+```bash
+/spawncustomboat [player] [modelName]  # Spawnear barco desde modelo custom
+/listmodels                            # Ver modelos disponibles en BoatModels
+/boatinfo [player]                     # Info detallada del barco del jugador
+/stabilizeboat [player]                # Resetear física del barco
+```
+
+**Flujo de testing recomendado:**
+
+1. **Ver islas**: `/listislands`
+2. **Teleportarse**: `/tptoisle TonderFlashh pirate_cove`
+3. **Ver modelos custom**: `/listmodels`
+4. **Spawnear barco custom**: `/spawncustomboat TonderFlashh ModeloBarco`
+5. **Navegar libremente** caminando en el deck
+6. **Probar otras islas**: `/tptoisle TonderFlashh volcano_forge`
+7. **Info del barco**: `/boatinfo TonderFlashh`
+8. **Estabilizar si es necesario**: `/stabilizeboat TonderFlashh`
+
+### 🎯 **Próximos Pasos para Completar Fase 1**
+
+**🎯 Prioridad COMPLETADA CON ARQUITECTURA PROFESIONAL:**
+
+1. **✅ PRIORIDAD 1**: Base framework + inventory tab básico - COMPLETADO
+2. **✅ PRIORIDAD 2**: Emoji icons + stacking system - COMPLETADO
+3. **✅ PRIORIDAD 3**: Drag & Drop system profesional - COMPLETADO CON ARQUITECTURA AAA
+4. **✅ PRIORIDAD 4**: Single Source of Truth implementation - COMPLETADO
+5. **✅ PRIORIDAD 5**: Sistema de transacciones atómicas - COMPLETADO
+6. **✅ PRIORIDAD 6**: Testing API profesional - COMPLETADO
+7. **✅ PRIORIDAD 7**: Integridad de datos garantizada - COMPLETADO
+8. **🔄 PRIORIDAD 8**: Crafting tab improvements - EN PROGRESO
+9. **⏳ PRIORIDAD 9**: Polish + animations + mobile optimization - PENDIENTE
+
+**🔥 PRÓXIMOS PASOS PRIORITARIOS (Post-Arquitectura Profesional):**
+
+- [ ] **Sistema de herramientas ARK-style** con multiplicadores de damage/efficiency
+- [ ] **Craft queue system** para múltiples items simultáneos
+- [ ] **Recipe unlock progression** basado en level/exploration
+- [ ] **Mobile touch optimization** específica para crafting tab
+- [ ] **Preview window** con stats detallados de items crafteables
+- [ ] **Sound effects** para todas las UI interactions
+- [ ] **Hotbar persistence** (guardar configuración al salir del juego)
+- [ ] **Item tooltips avanzados** con información detallada
+- [ ] **Sistema de upgrades de barcos** (speed, armor, cannons)
+- [ ] **Combate naval básico** (cañón vs cañón)
+
+_El sistema de drag & drop está ahora **completamente terminado** con **arquitectura de calidad AAA** y **integridad de datos profesional**. Listo para cualquier carga de trabajo de producción._
 
 ---
 
@@ -615,13 +718,25 @@ _"Leaderboards + Competitions + Long-term Retention"_
 /listboats                      # Ver barcos disponibles
 ```
 
+**✅ NUEVOS Comandos de Barcos Custom:**
+
+```bash
+/spawncustomboat [player] [modelName]  # Spawnear barco desde modelo custom
+/listmodels                            # Ver modelos disponibles en BoatModels
+/boatinfo [player]                     # Info detallada del barco del jugador
+/stabilizeboat [player]                # Resetear física del barco
+```
+
 **Flujo de testing recomendado:**
 
 1. **Ver islas**: `/listislands`
 2. **Teleportarse**: `/tptoisle TonderFlashh pirate_cove`
-3. **Spawnear barco**: `/spawnboat TonderFlashh`
-4. **Navegar libremente** caminando en el deck
-5. **Probar otras islas**: `/tptoisle TonderFlashh volcano_forge`
+3. **Ver modelos custom**: `/listmodels`
+4. **Spawnear barco custom**: `/spawncustomboat TonderFlashh ModeloBarco`
+5. **Navegar libremente** caminando en el deck
+6. **Probar otras islas**: `/tptoisle TonderFlashh volcano_forge`
+7. **Info del barco**: `/boatinfo TonderFlashh`
+8. **Estabilizar si es necesario**: `/stabilizeboat TonderFlashh`
 
 ### 🎯 **Próximos Pasos para Completar Fase 1**
 

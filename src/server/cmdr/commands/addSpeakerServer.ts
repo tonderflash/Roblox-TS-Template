@@ -2,7 +2,7 @@ import { CommandContext } from "@rbxts/cmdr";
 import { Dependency } from "@flamework/core";
 import { SimpleBoatService } from "server/services/SimpleBoatService";
 
-export = function (context: CommandContext, targetPlayer?: Player, musicIndex?: number) {
+export = function (context: CommandContext, targetPlayer?: Player) {
     const player = targetPlayer || context.Executor;
     
     try {
@@ -10,16 +10,16 @@ export = function (context: CommandContext, targetPlayer?: Player, musicIndex?: 
         
         // Verificar que el jugador tenga un barco
         if (!simpleBoatService.isBoatSpawned(player)) {
-            return `❌ ${player.Name} no tiene ningún barco spawneado. Usa spawnBoat primero.`;
+            return `❌ ${player.Name} no tiene ningún barco spawneado`;
         }
         
-        // Agregar la bocina
-        const success = simpleBoatService.addSpeakerToBoat(player, musicIndex);
+        // Añadir bocina al barco
+        const success = simpleBoatService.addSpeakerToBoat(player);
         
         if (success) {
-            return `🔊 ${player.Name}: Bocina agregada al barco con música por proximidad!`;
+            return `🎵 ${player.Name}: Bocina añadida al barco exitosamente`;
         } else {
-            return `❌ No se pudo agregar la bocina al barco de ${player.Name}`;
+            return `❌ ${player.Name} ya tiene una bocina en su barco`;
         }
         
     } catch (error) {

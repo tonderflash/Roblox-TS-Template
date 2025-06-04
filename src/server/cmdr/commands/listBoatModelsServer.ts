@@ -5,7 +5,7 @@ import { SimpleBoatService } from "server/services/SimpleBoatService";
 export = function (context: CommandContext) {
     try {
         const simpleBoatService = Dependency<SimpleBoatService>();
-        return simpleBoatService.listAvailableBoatModels();
+        return simpleBoatService.listAvailableModels();
         
     } catch (error) {
         return `❌ Error: ${error}`;

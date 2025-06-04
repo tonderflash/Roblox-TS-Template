@@ -8,29 +8,10 @@ export = function (context: CommandContext, targetPlayer?: Player, modelName?: s
     try {
         const simpleBoatService = Dependency<SimpleBoatService>();
         
-        // Si no se especifica modelo, listar modelos disponibles
+        // Si no se especifica modelo, mostrar modelos disponibles
         if (!modelName) {
-            const availableModels = simpleBoatService.listAvailableBoatModels();
-            const success = simpleBoatService.spawnCustomBoat(player); // Usa modelo por defecto
-            
-            if (success) {
-                // Sentar automáticamente al jugador en el barco
-                task.wait(0.5);
-                
-                const boatSeat = simpleBoatService.getPlayerBoatSeat(player);
-                const character = player.Character;
-                
-                if (boatSeat && character) {
-                    const humanoid = character.FindFirstChild("Humanoid") as Humanoid;
-                    if (humanoid) {
-                        boatSeat.Sit(humanoid);
-                    }
-                }
-                
-                return `✅ ${player.Name} spawneó barco personalizado (modelo por defecto)\n🎮 Usa WASD para mover\n\n${availableModels}`;
-            } else {
-                return `❌ Error spawneando barco personalizado para ${player.Name}\n\n${availableModels}`;
-            }
+            const availableModels = simpleBoatService.listAvailableModels();
+            return `❌ Se requiere nombre del modelo\n\n${availableModels}\n\n📋 Uso: /spawnCustomBoat [jugador] [nombreModelo]`;
         }
         
         // Spawnar modelo específico
@@ -40,20 +21,23 @@ export = function (context: CommandContext, targetPlayer?: Player, modelName?: s
             // Sentar automáticamente al jugador en el barco
             task.wait(0.5);
             
-            const boatSeat = simpleBoatService.getPlayerBoatSeat(player);
+            const boatModel = simpleBoatService.getPlayerBoat(player);
             const character = player.Character;
             
-            if (boatSeat && character) {
+            if (boatModel && character) {
+                const vehicleSeat = boatModel.FindFirstChild("VehicleSeat") as VehicleSeat;
                 const humanoid = character.FindFirstChild("Humanoid") as Humanoid;
-                if (humanoid) {
-                    boatSeat.Sit(humanoid);
-                    return `✅ ${player.Name} spawneó barco personalizado: ${modelName} y se sentó automáticamente\n🎮 Usa WASD para mover el barco`;
+                
+                if (vehicleSeat && humanoid) {
+                    vehicleSeat.Sit(humanoid);
+                    return `✅ ${player.Name} spawneó barco CUSTOM: ${modelName} y se sentó automáticamente\n🎮 Usa WASD para controlar\n⚡ Sistema: BodyForce + BodyAngularVelocity`;
                 }
             }
             
-            return `✅ ${player.Name} spawneó barco personalizado: ${modelName} - siéntate en el DriverSeat para conducir`;
+            return `✅ ${player.Name} spawneó barco CUSTOM: ${modelName} - siéntate en el VehicleSeat para conducir`;
         } else {
-            return `❌ Error spawneando barco personalizado "${modelName}" para ${player.Name}`;
+            const availableModels = simpleBoatService.listAvailableModels();
+            return `❌ Error spawneando barco personalizado "${modelName}" para ${player.Name}\n\n${availableModels}`;
         }
         
     } catch (error) {

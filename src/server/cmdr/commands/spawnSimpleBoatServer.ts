@@ -13,18 +13,20 @@ export = function (context: CommandContext, targetPlayer?: Player) {
             // Sentar automáticamente al jugador en el barco
             task.wait(0.5); // Esperar un momento para que el barco se spawne completamente
             
-            const boatSeat = simpleBoatService.getPlayerBoatSeat(player);
+            const boatModel = simpleBoatService.getPlayerBoat(player);
             const character = player.Character;
             
-            if (boatSeat && character) {
+            if (boatModel && character) {
+                const vehicleSeat = boatModel.FindFirstChild("VehicleSeat") as VehicleSeat;
                 const humanoid = character.FindFirstChild("Humanoid") as Humanoid;
-                if (humanoid) {
-                    boatSeat.Sit(humanoid);
-                    return `✅ ${player.Name} spawneó barco conducible y se sentó automáticamente\n🎮 Usa WASD para mover el barco`;
+                
+                if (vehicleSeat && humanoid) {
+                    vehicleSeat.Sit(humanoid);
+                    return `✅ ${player.Name} spawneó barco SIMPLE y se sentó automáticamente\n🎮 Usa WASD para controlar\n⚡ Sistema: BodyForce + BodyAngularVelocity`;
                 }
             }
             
-            return `✅ ${player.Name} spawneó barco conducible - siéntate en el asiento rojo para conducir`;
+            return `✅ ${player.Name} spawneó barco SIMPLE - siéntate en el VehicleSeat para conducir`;
         } else {
             return `❌ Error spawneando barco simple para ${player.Name}`;
         }

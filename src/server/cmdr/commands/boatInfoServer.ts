@@ -9,15 +9,15 @@ export = function (context: CommandContext, targetPlayer?: Player) {
         const simpleBoatService = Dependency<SimpleBoatService>();
         
         if (!simpleBoatService.hasBoat(player)) {
-            return `❌ ${player.Name} no tiene un barco spawneado`;
+            return `❌ ${player.Name} no tiene un barco spawneado\n\n🎮 Comandos disponibles:\n/spawnSimpleBoat - Spawna barco básico\n/spawnCustomBoat [modelo] - Spawna barco personalizado\n/listModels - Lista modelos disponibles`;
         }
         
-        const success = simpleBoatService.despawnBoat(player);
+        const boatInfo = simpleBoatService.getBoatInfo(player);
         
-        if (success) {
-            return `✅ Barco de ${player.Name} despawneado exitosamente`;
+        if (boatInfo) {
+            return boatInfo;
         } else {
-            return `❌ Error despawneando barco de ${player.Name}`;
+            return `❌ Error obteniendo información del barco de ${player.Name}`;
         }
         
     } catch (error) {
