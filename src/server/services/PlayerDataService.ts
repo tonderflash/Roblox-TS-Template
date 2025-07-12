@@ -56,8 +56,8 @@ export class PlayerDataService implements OnInit {
 		const unsubscribe = store.subscribe(selectPlayerData(tostring(player.UserId)), (save) => {
 			if (save) profile.Data = save;
 		});
-		Players.PlayerRemoving.Connect((player) => {
-			if (player === player) unsubscribe();
+		Players.PlayerRemoving.Connect((leavingPlayer) => {
+			if (leavingPlayer === player) unsubscribe();
 		});
 	}
 
@@ -75,8 +75,8 @@ export class PlayerDataService implements OnInit {
 			coins.Value = save?.Coins ?? 0;
 			gems.Value = save?.Gems ?? 0;
 		});
-		Players.PlayerRemoving.Connect((player) => {
-			if (player === player) unsubscribe();
+		Players.PlayerRemoving.Connect((leavingPlayer) => {
+			if (leavingPlayer === player) unsubscribe();
 		});
 	}
 
