@@ -414,12 +414,28 @@ export class SimpleBoatService implements OnStart {
         // Limpiar conexión de control si existe
         if (boat.controlConnection) {
             boat.controlConnection.Disconnect();
+            boat.controlConnection = undefined;
         }
         
         // Parar música si existe
         if (boat.sound && boat.musicData?.isPlaying) {
             boat.sound.Stop();
         }
+        
+        // Limpiar referencias de sonido para evitar memory leaks
+        if (boat.sound) {
+            boat.sound.Destroy();
+            boat.sound = undefined;
+        }
+        
+        // Limpiar referencias de speaker
+        if (boat.speaker) {
+            boat.speaker.Destroy();
+            boat.speaker = undefined;
+        }
+        
+        // Limpiar datos de música
+        boat.musicData = undefined;
         
         boat.model.Destroy();
         this.spawnedBoats.delete(player);
@@ -694,6 +710,7 @@ export class SimpleBoatService implements OnStart {
             // Parar música si está sonando
             if (boat.sound) {
                 boat.sound.Stop();
+                boat.sound.Destroy(); // Properly destroy the sound instance
             }
             
             // Destruir bocina

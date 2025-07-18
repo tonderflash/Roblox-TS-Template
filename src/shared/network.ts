@@ -5,6 +5,27 @@ import { PlayerData } from "./store/slices/players/types";
 import { Setting } from "./configs/Settings";
 import { AttackType, DamageInfo } from "./types/combat";
 
+// Import Vector3, Player, and Map from Roblox types
+declare global {
+	interface Vector3 {
+		X: number;
+		Y: number;
+		Z: number;
+	}
+	interface Player {
+		Name: string;
+		UserId: number;
+	}
+	interface Map<K, V> {
+		get(key: K): V | undefined;
+		set(key: K, value: V): void;
+		has(key: K): boolean;
+		delete(key: K): boolean;
+		clear(): void;
+		size(): number;
+	}
+}
+
 // Definimos un tipo para el inventario que coincida con los datos enviados desde InventoryService
 interface PlayerInventory {
 	resources: Record<string, number>; // Se serializa como objeto, no Map
@@ -26,42 +47,42 @@ interface ServerEvents {
 		start: () => void;
 	}
 
-	toggleSetting: (setting: unknown) => void;
+	toggleSetting: (setting: Setting) => void;
 	
 	// Combat Events
-	performAttack: (attackType: unknown, target?: unknown) => void;
-	equipFruit: (fruitId: unknown) => void;
+	performAttack: (attackType: AttackType, target?: Vector3) => void;
+	equipFruit: (fruitId: string) => void;
 	unequipFruit: () => void;
 	
 	// Boat Events
 	spawnBoat: () => void;
 	despawnBoat: () => void;
-	upgradeBoat: (upgradeId: unknown) => void;
-	customizeBoat: (customizationId: unknown) => void;
-	fireCannonAt: (targetPosition: unknown) => void;
+	upgradeBoat: (upgradeId: string) => void;
+	customizeBoat: (customizationId: string) => void;
+	fireCannonAt: (targetPosition: Vector3) => void;
 	repairBoat: () => void;
 	
 	// Boat Navigation Events
-	startBoatNavigation: (direction: unknown) => void;
+	startBoatNavigation: (direction: Vector3) => void;
 	stopBoatNavigation: () => void;
 	
 	// GUI Events
 	openInventory: () => void;
 	closeInventory: () => void;
-	craftItem: (recipeId: unknown) => void;
-	giveResource: (resourceType: unknown, amount: unknown) => void;
-	unlockRecipe: (recipeId: unknown) => void;
+	craftItem: (recipeId: string) => void;
+	giveResource: (resourceType: string, amount: number) => void;
+	unlockRecipe: (recipeId: string) => void;
 	resetInventory: () => void;
 	
 	// NUEVO: Hotbar Events
-	useHotbarSlot: (slotIndex: unknown) => void;
-	moveItemToHotbar: (itemId: unknown, fromSlot: unknown, toSlot: unknown) => void;
-	moveHotbarSlot: (fromSlot: unknown, toSlot: unknown) => void;
-	removeItemFromHotbar: (slotIndex: unknown) => void;
+	useHotbarSlot: (slotIndex: number) => void;
+	moveItemToHotbar: (itemId: string, fromSlot: number, toSlot: number) => void;
+	moveHotbarSlot: (fromSlot: number, toSlot: number) => void;
+	removeItemFromHotbar: (slotIndex: number) => void;
 	
 	// NUEVO: Player Stats Events
-	addExperience: (amount: unknown) => void;
-	setLevel: (level: unknown) => void;
+	addExperience: (amount: number) => void;
+	setLevel: (level: number) => void;
 }
 
 interface ServerFunctions {}
